@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FleetFlag - DevOps Toolchain Management</title>
+    <title>FleetFlag - DevOps Toolchain Management (4 Views)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,7 +59,7 @@
         
         /* Tab Styles */
         .tab-button {
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 8px 8px 0 0;
             background: rgba(30, 41, 59, 0.5);
             color: #94a3b8;
@@ -67,6 +67,7 @@
             cursor: pointer;
             border: 1px solid rgba(148, 163, 184, 0.1);
             border-bottom: none;
+            font-size: 14px;
         }
         
         .tab-button:hover {
@@ -89,8 +90,8 @@
             display: block;
         }
         
-        /* DevOps Workflow View Styles */
-        #workflow-canvas {
+        /* Canvas Styles */
+        .workflow-canvas {
             width: 100%;
             height: 600px;
             background: rgba(15, 23, 42, 0.5);
@@ -107,8 +108,6 @@
         }
         
         .stage-circle {
-            fill: var(--primary);
-            stroke-width: 3;
             transition: all 0.3s ease;
         }
         
@@ -131,22 +130,69 @@
             fill: none;
             stroke: #475569;
             stroke-width: 2;
-            stroke-dasharray: 5, 5;
             opacity: 0.6;
-            animation: dash 20s linear infinite;
-        }
-        
-        @keyframes dash {
-            to {
-                stroke-dashoffset: -1000;
-            }
         }
         
         .arrow-marker {
             fill: #475569;
         }
         
-        /* Toolchain Status View Styles */
+        .animated-particle {
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+        
+        /* Horizontal Pipeline Styles */
+        .pipeline-stage {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .pipeline-stage:hover {
+            transform: translateY(-4px);
+            filter: brightness(1.2);
+        }
+        
+        .pipeline-arrow {
+            fill: none;
+            stroke: #00aad2;
+            stroke-width: 3;
+            marker-end: url(#arrow-head);
+            animation: flow 2s linear infinite;
+        }
+        
+        @keyframes flow {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -20; }
+        }
+        
+        /* Hybrid Layer Styles */
+        .tool-group {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-group:hover {
+            transform: scale(1.05);
+        }
+        
+        .tool-bubble {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-bubble:hover {
+            transform: scale(1.1);
+            filter: brightness(1.3);
+        }
+        
+        .vertical-connector {
+            stroke: #475569;
+            stroke-width: 2;
+            stroke-dasharray: 8, 4;
+            opacity: 0.4;
+        }
+        
+        /* Tool Card Styles */
         .tool-card {
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid rgba(148, 163, 184, 0.1);
@@ -345,7 +391,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-white">DevOps Toolchain Management</h1>
-                    <p class="text-gray-400 text-sm mt-1">실시간 DevOps 워크플로우 및 툴체인 모니터링</p>
+                    <p class="text-gray-400 text-sm mt-1">4가지 시각화 스타일로 보는 DevOps 워크플로우</p>
                 </div>
             </div>
             
@@ -362,66 +408,145 @@
     
     <!-- Tab Navigation -->
     <div class="flex gap-2 mb-0">
-        <button class="tab-button active" onclick="switchTab('workflow')">
-            <i class="fas fa-infinity mr-2"></i>DevOps Workflow View
+        <button class="tab-button active" onclick="switchTab('infinity')">
+            <i class="fas fa-infinity mr-2"></i>Infinity Loop
+        </button>
+        <button class="tab-button" onclick="switchTab('horizontal')">
+            <i class="fas fa-arrow-right mr-2"></i>Horizontal Pipeline
+        </button>
+        <button class="tab-button" onclick="switchTab('hybrid')">
+            <i class="fas fa-layer-group mr-2"></i>Hybrid Layers
         </button>
         <button class="tab-button" onclick="switchTab('status')">
-            <i class="fas fa-th-large mr-2"></i>Toolchain Status View
+            <i class="fas fa-th-large mr-2"></i>Toolchain Status
         </button>
     </div>
     
-    <!-- Tab 1: DevOps Workflow View -->
-    <div id="workflow-tab" class="tab-content active glass-card rounded-2xl rounded-tl-none p-8">
+    <!-- Tab 1: Infinity Loop View -->
+    <div id="infinity-tab" class="tab-content active glass-card rounded-2xl rounded-tl-none p-8">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white">
-                <i class="fas fa-project-diagram mr-2 text-cyan-500"></i>
-                DevOps 순환형 워크플로우
+                <i class="fas fa-infinity mr-2 text-cyan-500"></i>
+                무한대(∞) 루프 스타일 - DevOps 지속적 개선
             </h2>
             
             <div class="flex items-center gap-3">
-                <span class="text-gray-400 text-sm">시뮬레이션 속도:</span>
-                <select id="workflow-speed" onchange="updateSimulationSpeed()" class="filter-button">
+                <span class="text-gray-400 text-sm">애니메이션 속도:</span>
+                <select id="infinity-speed" onchange="updateInfinitySpeed()" class="filter-button">
                     <option value="0.5">0.5x</option>
                     <option value="1" selected>1x</option>
                     <option value="2">2x</option>
                     <option value="5">5x</option>
                 </select>
                 
-                <button onclick="toggleSimulation()" id="sim-toggle" class="filter-button">
+                <button onclick="toggleInfinitySimulation()" id="infinity-toggle" class="filter-button">
                     <i class="fas fa-pause mr-2"></i>일시정지
                 </button>
             </div>
         </div>
         
-        <div id="workflow-canvas"></div>
+        <div id="infinity-canvas" class="workflow-canvas"></div>
         
-        <!-- Workflow Stats -->
         <div class="grid grid-cols-4 gap-4 mt-6">
             <div class="stat-card">
-                <div class="stat-value" id="total-stages">8</div>
-                <div class="stat-label">Total Stages</div>
+                <div class="stat-value">∞</div>
+                <div class="stat-label">Continuous Loop</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="active-tools">23</div>
-                <div class="stat-label">Active Tools</div>
+                <div class="stat-value">8</div>
+                <div class="stat-label">DevOps Stages</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="cycle-time">2.5</div>
-                <div class="stat-label">Cycle Time (min)</div>
+                <div class="stat-value">2</div>
+                <div class="stat-label">Dev + Ops</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="success-rate">98.5%</div>
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Collaboration</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 2: Horizontal Pipeline View -->
+    <div id="horizontal-tab" class="tab-content glass-card rounded-2xl rounded-tl-none p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white">
+                <i class="fas fa-arrow-right mr-2 text-cyan-500"></i>
+                수평 파이프라인 스타일 - 순차적 CI/CD 흐름
+            </h2>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHorizontalAnimation()" id="horizontal-toggle" class="filter-button">
+                    <i class="fas fa-pause mr-2"></i>일시정지
+                </button>
+            </div>
+        </div>
+        
+        <div id="horizontal-canvas" class="workflow-canvas"></div>
+        
+        <div class="grid grid-cols-4 gap-4 mt-6">
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Pipeline Stages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">→</div>
+                <div class="stat-label">Linear Flow</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">24</div>
+                <div class="stat-label">Integrated Tools</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">98%</div>
                 <div class="stat-label">Success Rate</div>
             </div>
         </div>
     </div>
     
-    <!-- Tab 2: Toolchain Status View -->
+    <!-- Tab 3: Hybrid Layers View -->
+    <div id="hybrid-tab" class="tab-content glass-card rounded-2xl rounded-tl-none p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white">
+                <i class="fas fa-layer-group mr-2 text-cyan-500"></i>
+                계층형 하이브리드 - 3-Layer DevOps 아키텍처
+            </h2>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="toggleHybridAnimation()" id="hybrid-toggle" class="filter-button">
+                    <i class="fas fa-pause mr-2"></i>일시정지
+                </button>
+            </div>
+        </div>
+        
+        <div id="hybrid-canvas" class="workflow-canvas" style="height: 700px;"></div>
+        
+        <div class="grid grid-cols-4 gap-4 mt-6">
+            <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Architecture Layers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">27</div>
+                <div class="stat-label">Total Tools</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Core Stages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">↕</div>
+                <div class="stat-label">Vertical Integration</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 4: Toolchain Status View -->
     <div id="status-tab" class="tab-content glass-card rounded-2xl rounded-tl-none p-8">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white">
                 <i class="fas fa-toolbox mr-2 text-cyan-500"></i>
-                DevOps Toolchain 현황
+                DevOps Toolchain 현황판
             </h2>
             
             <div class="flex items-center gap-3">
@@ -480,111 +605,50 @@
         // DevOps Toolchain Data
         const toolchainData = {
             stages: [
-                {
-                    id: 'plan',
-                    name: 'Plan',
-                    color: '#7e57c2',
-                    icon: 'lightbulb',
-                    tools: ['Jira', 'Trello', 'Azure Boards']
-                },
-                {
-                    id: 'code',
-                    name: 'Code',
-                    color: '#26a69a',
-                    icon: 'code',
-                    tools: ['GitHub', 'GitLab', 'Bitbucket']
-                },
-                {
-                    id: 'build',
-                    name: 'Build',
-                    color: '#42a5f5',
-                    icon: 'hammer',
-                    tools: ['Maven', 'Gradle', 'npm']
-                },
-                {
-                    id: 'test',
-                    name: 'Test',
-                    color: '#66bb6a',
-                    icon: 'vial',
-                    tools: ['JUnit', 'Selenium', 'Jest']
-                },
-                {
-                    id: 'release',
-                    name: 'Release',
-                    color: '#ffa726',
-                    icon: 'rocket',
-                    tools: ['Jenkins', 'GitLab CI', 'CircleCI']
-                },
-                {
-                    id: 'deploy',
-                    name: 'Deploy',
-                    color: '#ef5350',
-                    icon: 'server',
-                    tools: ['Kubernetes', 'Docker', 'Ansible']
-                },
-                {
-                    id: 'operate',
-                    name: 'Operate',
-                    color: '#ab47bc',
-                    icon: 'cogs',
-                    tools: ['Chef', 'Puppet', 'Terraform']
-                },
-                {
-                    id: 'monitor',
-                    name: 'Monitor',
-                    color: '#29b6f6',
-                    icon: 'chart-line',
-                    tools: ['Prometheus', 'Grafana', 'Datadog']
-                }
+                { id: 'plan', name: 'Plan', color: '#7e57c2', icon: 'lightbulb', tools: ['Jira', 'Trello', 'Azure Boards'] },
+                { id: 'code', name: 'Code', color: '#26a69a', icon: 'code', tools: ['GitHub', 'GitLab', 'Bitbucket'] },
+                { id: 'build', name: 'Build', color: '#42a5f5', icon: 'hammer', tools: ['Maven', 'Gradle', 'npm'] },
+                { id: 'test', name: 'Test', color: '#66bb6a', icon: 'vial', tools: ['JUnit', 'Selenium', 'Jest'] },
+                { id: 'release', name: 'Release', color: '#ffa726', icon: 'rocket', tools: ['Jenkins', 'GitLab CI', 'CircleCI'] },
+                { id: 'deploy', name: 'Deploy', color: '#ef5350', icon: 'server', tools: ['Kubernetes', 'Docker', 'Ansible'] },
+                { id: 'operate', name: 'Operate', color: '#ab47bc', icon: 'cogs', tools: ['Chef', 'Puppet', 'Terraform'] },
+                { id: 'monitor', name: 'Monitor', color: '#29b6f6', icon: 'chart-line', tools: ['Prometheus', 'Grafana', 'Datadog'] }
             ]
         };
         
         const tools = [
-            // Plan
             { name: 'Jira', stage: 'plan', icon: 'fab fa-jira', status: 'active', color: '#0052cc' },
             { name: 'Trello', stage: 'plan', icon: 'fab fa-trello', status: 'active', color: '#0079bf' },
             { name: 'Azure Boards', stage: 'plan', icon: 'fab fa-microsoft', status: 'warning', color: '#0078d4' },
-            
-            // Code
             { name: 'GitHub', stage: 'code', icon: 'fab fa-github', status: 'active', color: '#181717' },
             { name: 'GitLab', stage: 'code', icon: 'fab fa-gitlab', status: 'active', color: '#fc6d26' },
             { name: 'Bitbucket', stage: 'code', icon: 'fab fa-bitbucket', status: 'active', color: '#0052cc' },
-            
-            // Build
             { name: 'Maven', stage: 'build', icon: 'fas fa-cube', status: 'active', color: '#c71a36' },
             { name: 'Gradle', stage: 'build', icon: 'fas fa-cubes', status: 'active', color: '#02303a' },
             { name: 'npm', stage: 'build', icon: 'fab fa-npm', status: 'progress', color: '#cb3837' },
-            
-            // Test
             { name: 'JUnit', stage: 'test', icon: 'fas fa-flask', status: 'active', color: '#25a162' },
             { name: 'Selenium', stage: 'test', icon: 'fas fa-robot', status: 'active', color: '#43b02a' },
             { name: 'Jest', stage: 'test', icon: 'fas fa-vial', status: 'active', color: '#c21325' },
-            
-            // Release
             { name: 'Jenkins', stage: 'release', icon: 'fab fa-jenkins', status: 'active', color: '#d24939' },
             { name: 'GitLab CI', stage: 'release', icon: 'fab fa-gitlab', status: 'warning', color: '#fc6d26' },
             { name: 'CircleCI', stage: 'release', icon: 'fas fa-circle', status: 'active', color: '#343434' },
             { name: 'Travis CI', stage: 'release', icon: 'fas fa-check-circle', status: 'inactive', color: '#3eaaaf' },
-            
-            // Deploy
             { name: 'Kubernetes', stage: 'deploy', icon: 'fas fa-dharmachakra', status: 'active', color: '#326ce5' },
             { name: 'Docker', stage: 'deploy', icon: 'fab fa-docker', status: 'active', color: '#2496ed' },
             { name: 'Ansible', stage: 'deploy', icon: 'fas fa-server', status: 'progress', color: '#ee0000' },
-            
-            // Operate
             { name: 'Chef', stage: 'operate', icon: 'fas fa-hat-chef', status: 'active', color: '#f09820' },
             { name: 'Puppet', stage: 'operate', icon: 'fas fa-paw', status: 'error', color: '#ffae1a' },
             { name: 'Terraform', stage: 'operate', icon: 'fas fa-layer-group', status: 'active', color: '#5c4ee5' },
-            
-            // Monitor
             { name: 'Prometheus', stage: 'monitor', icon: 'fas fa-fire', status: 'active', color: '#e6522c' },
             { name: 'Grafana', stage: 'monitor', icon: 'fas fa-chart-area', status: 'active', color: '#f46800' },
             { name: 'Datadog', stage: 'monitor', icon: 'fas fa-dog', status: 'active', color: '#632ca6' },
             { name: 'Splunk', stage: 'monitor', icon: 'fas fa-chart-line', status: 'warning', color: '#000000' }
         ];
         
-        let simulationRunning = true;
-        let simulationSpeed = 1;
+        let infinityRunning = true;
+        let horizontalRunning = true;
+        let hybridRunning = true;
+        let infinitySpeed = 1;
         let currentFilter = 'all';
         
         // Tab Switching
@@ -592,33 +656,34 @@
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            if (tab === 'workflow') {
-                document.querySelector('.tab-button:nth-child(1)').classList.add('active');
-                document.getElementById('workflow-tab').classList.add('active');
-                initWorkflowView();
-            } else {
-                document.querySelector('.tab-button:nth-child(2)').classList.add('active');
-                document.getElementById('status-tab').classList.add('active');
-                renderToolchainGrid();
-            }
+            const tabMap = {
+                'infinity': { btn: 0, content: 'infinity-tab', init: initInfinityView },
+                'horizontal': { btn: 1, content: 'horizontal-tab', init: initHorizontalView },
+                'hybrid': { btn: 2, content: 'hybrid-tab', init: initHybridView },
+                'status': { btn: 3, content: 'status-tab', init: renderToolchainGrid }
+            };
+            
+            const selected = tabMap[tab];
+            document.querySelectorAll('.tab-button')[selected.btn].classList.add('active');
+            document.getElementById(selected.content).classList.add('active');
+            selected.init();
         }
         
-        // Initialize Workflow View
-        function initWorkflowView() {
-            const container = document.getElementById('workflow-canvas');
+        // View 1: Infinity Loop (Lemniscate)
+        function initInfinityView() {
+            const container = document.getElementById('infinity-canvas');
             container.innerHTML = '';
             
             const width = container.clientWidth;
             const height = 600;
             
-            const svg = d3.select('#workflow-canvas')
+            const svg = d3.select('#infinity-canvas')
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height);
             
-            // Define arrow marker
             svg.append('defs').append('marker')
-                .attr('id', 'arrow')
+                .attr('id', 'arrow-infinity')
                 .attr('viewBox', '0 -5 10 10')
                 .attr('refX', 8)
                 .attr('refY', 0)
@@ -631,31 +696,44 @@
             
             const centerX = width / 2;
             const centerY = height / 2;
-            const radiusX = 280;
-            const radiusY = 200;
+            const radiusX = 300;
+            const radiusY = 150;
             
-            const stages = toolchainData.stages;
-            const angleStep = (2 * Math.PI) / stages.length;
+            const stages = [...toolchainData.stages];
             
-            // Calculate positions
+            // Lemniscate of Gerono (∞ 모양)
+            function lemniscate(t) {
+                const cos_t = Math.cos(t);
+                const sin_t = Math.sin(t);
+                const denom = 1 + sin_t * sin_t;
+                return {
+                    x: centerX + radiusX * cos_t / denom,
+                    y: centerY + radiusY * sin_t * cos_t / denom
+                };
+            }
+            
             stages.forEach((stage, i) => {
-                const angle = i * angleStep - Math.PI / 2;
-                stage.x = centerX + radiusX * Math.cos(angle);
-                stage.y = centerY + radiusY * Math.sin(angle);
+                const t = (i / stages.length) * 2 * Math.PI;
+                const pos = lemniscate(t);
+                stage.x = pos.x;
+                stage.y = pos.y;
             });
             
-            // Draw connections
-            const connections = svg.append('g');
-            stages.forEach((stage, i) => {
-                const nextStage = stages[(i + 1) % stages.length];
-                
-                connections.append('path')
-                    .attr('class', 'connection-line')
-                    .attr('d', `M ${stage.x} ${stage.y} L ${nextStage.x} ${nextStage.y}`)
-                    .attr('marker-end', 'url(#arrow)');
-            });
+            // Draw path
+            const pathData = [];
+            for (let t = 0; t < 2 * Math.PI; t += 0.1) {
+                const pos = lemniscate(t);
+                pathData.push([pos.x, pos.y]);
+            }
             
-            // Draw stage nodes
+            const line = d3.line().curve(d3.curveCardinalClosed);
+            
+            svg.append('path')
+                .attr('d', line(pathData))
+                .attr('class', 'connection-line')
+                .style('stroke-dasharray', '5, 5')
+                .attr('marker-mid', 'url(#arrow-infinity)');
+            
             const nodes = svg.append('g');
             
             stages.forEach((stage, i) => {
@@ -664,71 +742,350 @@
                     .attr('transform', `translate(${stage.x}, ${stage.y})`)
                     .on('click', () => showStageDetails(stage));
                 
-                // Circle
                 node.append('circle')
                     .attr('class', 'stage-circle')
                     .attr('r', 60)
                     .attr('fill', stage.color)
                     .attr('stroke', stage.color)
-                    .attr('fill-opacity', 0.2);
+                    .attr('fill-opacity', 0.2)
+                    .attr('stroke-width', 3);
                 
-                // Icon
                 node.append('text')
                     .attr('class', 'stage-label')
                     .attr('y', -10)
                     .attr('font-size', '24px')
                     .text('●');
                 
-                // Stage name
                 node.append('text')
                     .attr('class', 'stage-label')
                     .attr('y', 10)
                     .text(stage.name);
                 
-                // Tool count
                 node.append('text')
                     .attr('class', 'stage-tools')
                     .attr('y', 28)
                     .text(`${stage.tools.length} tools`);
             });
             
-            // Animate particle
-            animateWorkflowParticle(svg, stages);
-        }
-        
-        function animateWorkflowParticle(svg, stages) {
+            // Animated particle
             const particle = svg.append('circle')
                 .attr('r', 6)
                 .attr('fill', '#00aad2')
-                .attr('filter', 'drop-shadow(0 0 8px #00aad2)');
+                .attr('class', 'animated-particle')
+                .style('color', '#00aad2');
             
-            function animate() {
-                if (!simulationRunning) {
-                    setTimeout(animate, 100);
+            function animateInfinity() {
+                if (!infinityRunning) {
+                    setTimeout(animateInfinity, 100);
                     return;
                 }
                 
-                const duration = 16000 / simulationSpeed;
+                const duration = 16000 / infinitySpeed;
                 
-                stages.forEach((stage, i) => {
-                    const nextStage = stages[(i + 1) % stages.length];
-                    
-                    setTimeout(() => {
-                        particle.transition()
-                            .duration(duration / stages.length)
-                            .ease(d3.easeLinear)
-                            .attr('cx', nextStage.x)
-                            .attr('cy', nextStage.y);
-                    }, (duration / stages.length) * i);
-                });
+                function moveParticle() {
+                    for (let t = 0; t < 2 * Math.PI; t += 0.05) {
+                        setTimeout(() => {
+                            if (!infinityRunning) return;
+                            const pos = lemniscate(t);
+                            particle.attr('cx', pos.x).attr('cy', pos.y);
+                        }, (t / (2 * Math.PI)) * duration);
+                    }
+                    setTimeout(moveParticle, duration);
+                }
                 
-                setTimeout(animate, duration);
+                moveParticle();
             }
             
-            animate();
+            animateInfinity();
         }
         
-        // Render Toolchain Grid
+        // View 2: Horizontal Pipeline
+        function initHorizontalView() {
+            const container = document.getElementById('horizontal-canvas');
+            container.innerHTML = '';
+            
+            const width = container.clientWidth;
+            const height = 600;
+            
+            const svg = d3.select('#horizontal-canvas')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            svg.append('defs').append('marker')
+                .attr('id', 'arrow-head')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 10)
+                .attr('refY', 0)
+                .attr('markerWidth', 8)
+                .attr('markerHeight', 8)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .style('fill', '#00aad2');
+            
+            const stages = [...toolchainData.stages];
+            const stageWidth = 120;
+            const stageHeight = 80;
+            const spacing = 60;
+            const startX = 50;
+            const startY = height / 2 - stageHeight / 2;
+            
+            // Draw stages
+            const stageGroup = svg.append('g');
+            
+            stages.forEach((stage, i) => {
+                const x = startX + i * (stageWidth + spacing);
+                const y = startY;
+                
+                const g = stageGroup.append('g')
+                    .attr('class', 'pipeline-stage')
+                    .on('click', () => showStageDetails(stage));
+                
+                // Gradient definition
+                const gradId = `grad-${stage.id}`;
+                const grad = svg.append('defs').append('linearGradient')
+                    .attr('id', gradId)
+                    .attr('x1', '0%').attr('y1', '0%')
+                    .attr('x2', '0%').attr('y2', '100%');
+                
+                grad.append('stop')
+                    .attr('offset', '0%')
+                    .style('stop-color', stage.color)
+                    .style('stop-opacity', 1);
+                
+                grad.append('stop')
+                    .attr('offset', '100%')
+                    .style('stop-color', d3.color(stage.color).darker(0.5))
+                    .style('stop-opacity', 1);
+                
+                // Box
+                g.append('rect')
+                    .attr('x', x)
+                    .attr('y', y)
+                    .attr('width', stageWidth)
+                    .attr('height', stageHeight)
+                    .attr('rx', 12)
+                    .attr('fill', `url(#${gradId})`)
+                    .attr('stroke', stage.color)
+                    .attr('stroke-width', 2);
+                
+                // Text
+                g.append('text')
+                    .attr('x', x + stageWidth / 2)
+                    .attr('y', y + stageHeight / 2)
+                    .attr('text-anchor', 'middle')
+                    .attr('dominant-baseline', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '16px')
+                    .attr('font-weight', '600')
+                    .text(stage.name);
+                
+                // Arrow
+                if (i < stages.length - 1) {
+                    const arrowX1 = x + stageWidth;
+                    const arrowX2 = x + stageWidth + spacing;
+                    const arrowY = y + stageHeight / 2;
+                    
+                    svg.append('path')
+                        .attr('class', 'pipeline-arrow')
+                        .attr('d', `M ${arrowX1} ${arrowY} L ${arrowX2} ${arrowY}`)
+                        .attr('stroke-dasharray', '5, 5');
+                }
+                
+                // Tool count badge
+                g.append('circle')
+                    .attr('cx', x + stageWidth - 15)
+                    .attr('cy', y + 15)
+                    .attr('r', 12)
+                    .attr('fill', '#00aad2');
+                
+                g.append('text')
+                    .attr('x', x + stageWidth - 15)
+                    .attr('y', y + 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('dominant-baseline', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '10px')
+                    .attr('font-weight', '700')
+                    .text(stage.tools.length);
+            });
+        }
+        
+        // View 3: Hybrid Layers
+        function initHybridView() {
+            const container = document.getElementById('hybrid-canvas');
+            container.innerHTML = '';
+            
+            const width = container.clientWidth;
+            const height = 700;
+            
+            const svg = d3.select('#hybrid-canvas')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            const topY = 80;
+            const middleY = 350;
+            const bottomY = 620;
+            
+            // Top layer: Tool groups
+            const topTools = [
+                { name: 'Source Code', color: '#26a69a', tools: ['Git', 'SVN'] },
+                { name: 'Build Tools', color: '#42a5f5', tools: ['Maven', 'Gradle'] },
+                { name: 'Quality', color: '#66bb6a', tools: ['SonarQube', 'Fortify'] },
+                { name: 'Deploy', color: '#ef5350', tools: ['K8s', 'Docker'] }
+            ];
+            
+            const topGroup = svg.append('g');
+            
+            topTools.forEach((group, i) => {
+                const x = 150 + i * 250;
+                
+                const g = topGroup.append('g')
+                    .attr('class', 'tool-group');
+                
+                g.append('rect')
+                    .attr('x', x - 60)
+                    .attr('y', topY - 40)
+                    .attr('width', 120)
+                    .attr('height', 80)
+                    .attr('rx', 16)
+                    .attr('fill', group.color + '20')
+                    .attr('stroke', group.color)
+                    .attr('stroke-width', 2);
+                
+                g.append('text')
+                    .attr('x', x)
+                    .attr('y', topY - 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '14px')
+                    .attr('font-weight', '600')
+                    .text(group.name);
+                
+                group.tools.forEach((tool, j) => {
+                    g.append('circle')
+                        .attr('class', 'tool-bubble')
+                        .attr('cx', x - 20 + j * 40)
+                        .attr('cy', topY + 15)
+                        .attr('r', 12)
+                        .attr('fill', group.color);
+                    
+                    g.append('text')
+                        .attr('x', x - 20 + j * 40)
+                        .attr('y', topY + 15)
+                        .attr('text-anchor', 'middle')
+                        .attr('dominant-baseline', 'middle')
+                        .attr('fill', 'white')
+                        .attr('font-size', '10px')
+                        .text(tool.substring(0, 1));
+                });
+                
+                // Vertical connector
+                svg.append('line')
+                    .attr('class', 'vertical-connector')
+                    .attr('x1', x)
+                    .attr('y1', topY + 50)
+                    .attr('x2', x)
+                    .attr('y2', middleY - 100);
+            });
+            
+            // Middle layer: Infinity loop (simplified)
+            const stages = [...toolchainData.stages];
+            const centerX = width / 2;
+            const radiusX = 220;
+            const radiusY = 100;
+            
+            stages.forEach((stage, i) => {
+                const angle = (i / stages.length) * 2 * Math.PI - Math.PI / 2;
+                stage.x = centerX + radiusX * Math.cos(angle);
+                stage.y = middleY + radiusY * Math.sin(angle);
+            });
+            
+            const line = d3.line().curve(d3.curveCardinalClosed);
+            const pathData = stages.map(s => [s.x, s.y]);
+            
+            svg.append('path')
+                .attr('d', line(pathData))
+                .attr('class', 'connection-line')
+                .style('stroke', '#00aad2')
+                .style('stroke-width', 3)
+                .style('stroke-dasharray', '8, 4');
+            
+            const middleGroup = svg.append('g');
+            
+            stages.forEach((stage, i) => {
+                const g = middleGroup.append('g')
+                    .attr('class', 'stage-node')
+                    .on('click', () => showStageDetails(stage));
+                
+                g.append('circle')
+                    .attr('cx', stage.x)
+                    .attr('cy', stage.y)
+                    .attr('r', 45)
+                    .attr('fill', stage.color)
+                    .attr('fill-opacity', 0.3)
+                    .attr('stroke', stage.color)
+                    .attr('stroke-width', 2);
+                
+                g.append('text')
+                    .attr('x', stage.x)
+                    .attr('y', stage.y)
+                    .attr('text-anchor', 'middle')
+                    .attr('dominant-baseline', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '13px')
+                    .attr('font-weight', '600')
+                    .text(stage.name);
+            });
+            
+            // Bottom layer: Support tools
+            const bottomTools = [
+                { name: 'CI Servers', color: '#ffa726' },
+                { name: 'Testing', color: '#66bb6a' },
+                { name: 'Config Mgmt', color: '#ab47bc' },
+                { name: 'Storage', color: '#29b6f6' }
+            ];
+            
+            const bottomGroup = svg.append('g');
+            
+            bottomTools.forEach((group, i) => {
+                const x = 200 + i * 220;
+                
+                const g = bottomGroup.append('g')
+                    .attr('class', 'tool-group');
+                
+                g.append('rect')
+                    .attr('x', x - 50)
+                    .attr('y', bottomY - 30)
+                    .attr('width', 100)
+                    .attr('height', 60)
+                    .attr('rx', 12)
+                    .attr('fill', group.color + '20')
+                    .attr('stroke', group.color)
+                    .attr('stroke-width', 2);
+                
+                g.append('text')
+                    .attr('x', x)
+                    .attr('y', bottomY)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '12px')
+                    .attr('font-weight', '600')
+                    .text(group.name);
+                
+                // Vertical connector
+                svg.append('line')
+                    .attr('class', 'vertical-connector')
+                    .attr('x1', x)
+                    .attr('y1', middleY + 120)
+                    .attr('x2', x)
+                    .attr('y2', bottomY - 35);
+            });
+        }
+        
+        // Toolchain Status Grid
         function renderToolchainGrid() {
             const grid = document.getElementById('toolchain-grid');
             grid.innerHTML = '';
@@ -862,15 +1219,6 @@
                                     <div class="activity-time">5분 전</div>
                                 </div>
                             </div>
-                            <div class="activity-item">
-                                <div class="activity-icon" style="background: ${tool.color}20; color: ${tool.color}">
-                                    <i class="fas fa-clock"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-title">빌드 시작</div>
-                                    <div class="activity-time">12분 전</div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -886,19 +1234,26 @@
         }
         
         // Simulation Controls
-        function toggleSimulation() {
-            simulationRunning = !simulationRunning;
-            const btn = document.getElementById('sim-toggle');
-            
-            if (simulationRunning) {
-                btn.innerHTML = '<i class="fas fa-pause mr-2"></i>일시정지';
-            } else {
-                btn.innerHTML = '<i class="fas fa-play mr-2"></i>재생';
-            }
+        function toggleInfinitySimulation() {
+            infinityRunning = !infinityRunning;
+            const btn = document.getElementById('infinity-toggle');
+            btn.innerHTML = infinityRunning ? '<i class="fas fa-pause mr-2"></i>일시정지' : '<i class="fas fa-play mr-2"></i>재생';
         }
         
-        function updateSimulationSpeed() {
-            simulationSpeed = parseFloat(document.getElementById('workflow-speed').value);
+        function updateInfinitySpeed() {
+            infinitySpeed = parseFloat(document.getElementById('infinity-speed').value);
+        }
+        
+        function toggleHorizontalAnimation() {
+            horizontalRunning = !horizontalRunning;
+            const btn = document.getElementById('horizontal-toggle');
+            btn.innerHTML = horizontalRunning ? '<i class="fas fa-pause mr-2"></i>일시정지' : '<i class="fas fa-play mr-2"></i>재생';
+        }
+        
+        function toggleHybridAnimation() {
+            hybridRunning = !hybridRunning;
+            const btn = document.getElementById('hybrid-toggle');
+            btn.innerHTML = hybridRunning ? '<i class="fas fa-pause mr-2"></i>일시정지' : '<i class="fas fa-play mr-2"></i>재생';
         }
         
         // Activity Log
@@ -922,13 +1277,11 @@
             
             log.insertBefore(item, log.firstChild);
             
-            // Keep only last 20 items
             while (log.children.length > 20) {
                 log.removeChild(log.lastChild);
             }
         }
         
-        // Simulate Activity
         function simulateActivity() {
             const activities = [
                 { message: 'GitHub: 새로운 커밋 푸시됨', icon: 'code-branch', color: '#26a69a' },
@@ -937,8 +1290,7 @@
                 { message: 'Docker: 이미지 빌드 완료', icon: 'docker', color: '#2496ed' },
                 { message: 'Kubernetes: Pod 배포 성공', icon: 'dharmachakra', color: '#326ce5' },
                 { message: 'Prometheus: 메트릭 수집 중', icon: 'chart-line', color: '#e6522c' },
-                { message: 'Grafana: 대시보드 업데이트', icon: 'chart-area', color: '#f46800' },
-                { message: 'Jira: 이슈 #456 완료', icon: 'check', color: '#7e57c2' }
+                { message: 'Grafana: 대시보드 업데이트', icon: 'chart-area', color: '#f46800' }
             ];
             
             setInterval(() => {
@@ -947,7 +1299,6 @@
             }, 3000);
         }
         
-        // Utility Functions
         function refreshData() {
             renderToolchainGrid();
             addActivityLog('데이터 새로고침 완료', 'sync', '#00aad2');
@@ -973,7 +1324,7 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            initWorkflowView();
+            initInfinityView();
             renderToolchainGrid();
             simulateActivity();
         });
