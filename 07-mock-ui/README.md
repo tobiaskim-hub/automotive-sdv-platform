@@ -10,6 +10,7 @@
 4. [Kill Switch 제어 센터](#4-kill-switch-제어-센터)
 5. [Rollout 전략 에디터](#5-rollout-전략-에디터)
 6. [Analytics & Monitoring 대시보드](#6-analytics--monitoring-대시보드)
+7. [End-to-End 시스템 시뮬레이터](#7-end-to-end-시스템-시뮬레이터) ⭐ **NEW**
 
 ---
 
@@ -162,6 +163,83 @@ Feature Flag의 성능, A/B 테스트 결과, 지역별 통계를 실시간 모�
 - ClickHouse 분석 데이터베이스 연동
 - Chart.js / D3.js 차트 라이브러리
 - Leaflet.js 지도 + Heatmap Layer 플러그인
+
+---
+
+## 7. End-to-End 시스템 시뮬레이터 ⭐
+
+**파일명**: `07-end-to-end-simulator.html`
+
+### 목적
+FleetFlag 시스템의 **전체 동작 흐름을 시각적으로 시뮬레이션**하여, Admin Console에서 Feature Flag 생성부터 차량 배포, 분석 수집까지의 **End-to-End 프로세스**를 실시간으로 확인합니다.
+
+### 주요 기능
+- **3가지 시나리오**: Feature 생성/배포, Kill Switch 긴급 발동, A/B 테스트 실행
+- **인터랙티브 흐름도**: 7개 컴포넌트 간 데이터 흐름 시각화 (노드 활성화 + 화살표 애니메이션)
+- **실시간 로그**: 각 단계의 로그 메시지 스트리밍
+- **데이터 페이로드**: JSON 형식으로 실제 데이터 구조 표시
+- **성능 메트릭**: 지연시간, 차량 수, 평가 횟수, 캐시 적중률 실시간 업데이트
+
+### 핵심 화면 요소
+- 시나리오 선택: 3개 카드형 라디오 버튼
+- 시스템 흐름도: SVG 화살표 + 8개 노드 (Admin, API, Flipt, PostgreSQL, Redis, ClickHouse, Vehicle, SDK)
+- 실행 단계: 7단계 프로그레스 바 (회색 → 파란색 → 녹색)
+- 실시간 로그: 타임스탬프 + 담당자 + 메시지
+- 데이터 페이로드: 구문 강조 JSON Viewer
+- 성능 메트릭: 4개 KPI 카드
+
+### 시나리오 상세
+
+#### Scenario 1: Feature 생성 및 배포
+```
+Admin → API Server (검증) → Flipt Engine → PostgreSQL 
+→ Redis Pub/Sub → Vehicle Agent (Delta Sync) 
+→ SDK (로컬 평가 2.1ms) → ClickHouse (분석)
+```
+- **소요시간**: 5초
+- **영향 차량**: 1,250대
+- **평가 횟수**: 4,523회
+- **캐시 적중률**: 98%
+
+#### Scenario 2: Kill Switch 긴급 발동
+```
+Admin (CTO 승인) → API Server (Emergency) → PostgreSQL 
+→ Redis (CRITICAL) → WebSocket Push (2.8초) 
+→ All Vehicles (12,800대) → Slack 알림
+```
+- **전파 시간**: 2.8초
+- **영향 차량**: 12,847대 (47대 오프라인)
+- **전파 완료율**: 99.6%
+
+#### Scenario 3: A/B 테스트 실행
+```
+Admin → Sticky Session 설정 → 3개 그룹 할당 (33/33/34%) 
+→ 14일간 메트릭 수집 → ClickHouse 분석 
+→ 통계적 유의성 검증 (p-value < 0.001)
+```
+- **실험 기간**: 14일
+- **총 평가**: 2,847,231회
+- **승자**: Variant A (GPT-4o, 인식률 +4.5%p)
+
+### 기술 요구사항
+- 순수 JavaScript (프레임워크 없음)
+- SVG 애니메이션 (60fps)
+- CSS Keyframes (pulse, dash, slideIn)
+- 2초 간격 단계 자동 진행
+
+### 활용 사례
+- **신규 개발자 온보딩**: 전체 시스템 아키텍처 학습
+- **Stakeholder 데모**: CTO, Safety Team에게 시각적 시연
+- **문제 해결 훈련**: 각 단계별 데이터 확인 및 디버깅
+- **교육 자료**: 비기술 팀에게 시스템 동작 설명
+
+### 확장 가능성
+- 새 시나리오 추가 (`scenarios` 객체 확장)
+- 타이밍 조정 (`sleep()` 시간 변경)
+- 커스텀 메트릭 추가
+- 실패 시나리오 시뮬레이션
+
+**상세 문서**: [END_TO_END_SIMULATOR.md](./END_TO_END_SIMULATOR.md)
 
 ---
 
