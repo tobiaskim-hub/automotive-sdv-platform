@@ -3,961 +3,698 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FleetFlag - End-to-End System Flow Simulator</title>
+    <title>FleetFlag - End-to-End 기능 제어 현황</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        .flow-node {
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
-        .flow-node:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
         }
+
+        .tab-button.active {
+            background: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+
+        .tab-button:not(.active) {
+            color: #94a3b8;
+        }
+
+        .tab-button:not(.active):hover {
+            background: rgba(0, 170, 210, 0.1);
+            color: var(--secondary);
+        }
+
+        .feature-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 170, 210, 0.3);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+        .status-testing { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+        .status-disabled { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+        .status-rollback { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+
+        .flow-node {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
         .flow-node.active {
-            animation: pulse-active 1.5s infinite;
             border-color: #10b981;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            animation: pulse-glow 2s infinite;
         }
-        @keyframes pulse-active {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.8); }
         }
+
         .flow-arrow {
-            stroke-width: 2;
-            stroke: #6b7280;
-            fill: none;
-            marker-end: url(#arrowhead);
+            width: 60px;
+            height: 2px;
+            background: #475569;
+            position: relative;
+            margin: 0 auto;
         }
+
+        .flow-arrow::after {
+            content: '→';
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            font-size: 20px;
+            color: #475569;
+        }
+
         .flow-arrow.active {
-            stroke: #10b981;
-            stroke-width: 3;
-            animation: dash 1s linear infinite;
+            background: #10b981;
+            animation: flow-animation 1.5s infinite;
         }
-        @keyframes dash {
-            to { stroke-dashoffset: -20; }
+
+        .flow-arrow.active::after {
+            color: #10b981;
         }
+
+        @keyframes flow-animation {
+            0% { opacity: 0.5; transform: scaleX(0.8); }
+            50% { opacity: 1; transform: scaleX(1.2); }
+            100% { opacity: 0.5; transform: scaleX(0.8); }
+        }
+
         .log-entry {
             animation: slideIn 0.3s ease-out;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 6px;
         }
+
         @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-        .step-indicator {
-            transition: all 0.3s ease;
-        }
-        .step-indicator.completed {
-            background-color: #10b981;
-            color: white;
-        }
-        .step-indicator.active {
-            background-color: #3b82f6;
-            color: white;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .code-block {
-            background: #1e293b;
-            color: #e2e8f0;
+
+        .log-info { background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; }
+        .log-success { background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; }
+        .log-warning { background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; }
+        .log-error { background: rgba(220, 38, 38, 0.1); border-left: 3px solid #dc2626; }
+
+        .metric-card {
+            background: rgba(30, 41, 59, 0.5);
             border-radius: 8px;
             padding: 16px;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            overflow-x: auto;
+            text-align: center;
         }
-        .highlight { color: #22c55e; font-weight: bold; }
-        .comment { color: #94a3b8; }
-        .keyword { color: #60a5fa; }
-        .string { color: #fbbf24; }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--secondary) 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #00aad2 100%);
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="p-6">
     <!-- Header -->
-    <header class="bg-[#002c5f] text-white shadow-lg">
-        <div class="container mx-auto px-6 py-4">
+    <div class="max-w-7xl mx-auto mb-6">
+        <div class="glass-card p-6">
             <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <i class="fas fa-project-diagram text-2xl"></i>
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-network-wired text-white text-xl"></i>
+                    </div>
                     <div>
-                        <h1 class="text-2xl font-bold">End-to-End System Flow Simulator</h1>
-                        <p class="text-sm text-blue-200">FleetFlag 전체 시스템 동작 시뮬레이션 (Feature 생성 → 배포 → 차량 평가 → 분석)</p>
+                        <h1 class="text-3xl font-bold text-white">End-to-End 기능 제어 현황</h1>
+                        <p class="text-gray-400">전체 Feature의 실시간 제어 상태 모니터링 및 시뮬레이션</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <button id="startSimulation" class="bg-green-600 px-6 py-3 rounded-lg hover:bg-green-700 font-bold">
-                        <i class="fas fa-play mr-2"></i>시뮬레이션 시작
-                    </button>
-                    <button id="resetSimulation" class="bg-gray-600 px-6 py-3 rounded-lg hover:bg-gray-700 font-bold">
-                        <i class="fas fa-redo mr-2"></i>초기화
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div class="container mx-auto px-6 py-8">
-        <!-- Scenario Selector -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">
-                <i class="fas fa-list-ul mr-2 text-blue-600"></i>시나리오 선택
-            </h2>
-            <div class="grid grid-cols-3 gap-4">
-                <label class="scenario-card border-2 border-blue-600 bg-blue-50 rounded-lg p-4 cursor-pointer">
-                    <input type="radio" name="scenario" value="feature-creation" checked class="mb-2">
-                    <div class="font-bold text-gray-900">📝 Feature 생성 및 배포</div>
-                    <div class="text-xs text-gray-600 mt-2">
-                        새 Feature Flag를 생성하고 단계별 Canary 배포하는 전체 흐름
+                <div class="text-right">
+                    <div class="text-sm text-gray-400">System Status</div>
+                    <div class="text-2xl font-bold text-green-400">
+                        <i class="fas fa-check-circle mr-2"></i>정상
                     </div>
-                </label>
-                <label class="scenario-card border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-gray-400">
-                    <input type="radio" name="scenario" value="kill-switch" class="mb-2">
-                    <div class="font-bold text-gray-900">🔴 Kill Switch 긴급 발동</div>
-                    <div class="text-xs text-gray-600 mt-2">
-                        안전 이슈 발견 시 3시간 내 전 차량 긴급 차단
-                    </div>
-                </label>
-                <label class="scenario-card border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-gray-400">
-                    <input type="radio" name="scenario" value="ab-test" class="mb-2">
-                    <div class="font-bold text-gray-900">🧪 A/B 테스트 실행</div>
-                    <div class="text-xs text-gray-600 mt-2">
-                        두 알고리즘을 비교하고 통계적 유의성 검증
-                    </div>
-                </label>
-            </div>
-        </div>
-
-        <!-- Main Flow Diagram -->
-        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-6">
-                <i class="fas fa-sitemap mr-2 text-purple-600"></i>시스템 흐름도
-            </h2>
-            
-            <div class="relative" style="height: 600px;">
-                <!-- SVG for Arrows -->
-                <svg class="absolute inset-0 w-full h-full" style="z-index: 0;">
-                    <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                            <polygon points="0 0, 10 3, 0 6" fill="#6b7280" />
-                        </marker>
-                        <marker id="arrowhead-active" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                            <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
-                        </marker>
-                    </defs>
-                    
-                    <!-- Admin → API Server -->
-                    <path id="arrow-1" class="flow-arrow" d="M 250 80 L 250 140" stroke-dasharray="5,5"/>
-                    
-                    <!-- API Server → Flipt -->
-                    <path id="arrow-2" class="flow-arrow" d="M 350 180 L 450 180" stroke-dasharray="5,5"/>
-                    
-                    <!-- Flipt → PostgreSQL -->
-                    <path id="arrow-3" class="flow-arrow" d="M 550 220 L 550 280" stroke-dasharray="5,5"/>
-                    
-                    <!-- PostgreSQL → Redis -->
-                    <path id="arrow-4" class="flow-arrow" d="M 650 320 L 750 320" stroke-dasharray="5,5"/>
-                    
-                    <!-- Redis → Vehicle Agent -->
-                    <path id="arrow-5" class="flow-arrow" d="M 850 360 L 850 420" stroke-dasharray="5,5"/>
-                    
-                    <!-- Vehicle Agent → SDK -->
-                    <path id="arrow-6" class="flow-arrow" d="M 850 500 L 850 560" stroke-dasharray="5,5"/>
-                    
-                    <!-- SDK → ClickHouse (Telemetry) -->
-                    <path id="arrow-7" class="flow-arrow" d="M 750 580 L 400 580 L 400 360" stroke-dasharray="5,5"/>
-                </svg>
-
-                <!-- Flow Nodes -->
-                <!-- Row 1: Admin Console -->
-                <div id="node-admin" class="flow-node absolute bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 20px; left: 150px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-user-shield text-3xl mb-2"></i>
-                        <div class="font-bold">Admin Console</div>
-                        <div class="text-xs opacity-80">React Dashboard</div>
-                    </div>
-                </div>
-
-                <!-- Row 2: API Server + Flipt -->
-                <div id="node-api" class="flow-node absolute bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 140px; left: 150px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-server text-3xl mb-2"></i>
-                        <div class="font-bold">FleetFlag API</div>
-                        <div class="text-xs opacity-80">Rust/Axum</div>
-                    </div>
-                </div>
-
-                <div id="node-flipt" class="flow-node absolute bg-gradient-to-br from-green-500 to-green-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 140px; left: 450px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-cogs text-3xl mb-2"></i>
-                        <div class="font-bold">Flipt Engine</div>
-                        <div class="text-xs opacity-80">OpenFeature</div>
-                    </div>
-                </div>
-
-                <!-- Row 3: PostgreSQL + Redis + ClickHouse -->
-                <div id="node-postgres" class="flow-node absolute bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 280px; left: 450px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-database text-3xl mb-2"></i>
-                        <div class="font-bold">PostgreSQL</div>
-                        <div class="text-xs opacity-80">Metadata Store</div>
-                    </div>
-                </div>
-
-                <div id="node-redis" class="flow-node absolute bg-gradient-to-br from-red-500 to-red-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 280px; left: 750px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-bolt text-3xl mb-2"></i>
-                        <div class="font-bold">Redis Cluster</div>
-                        <div class="text-xs opacity-80">Cache + Pub/Sub</div>
-                    </div>
-                </div>
-
-                <div id="node-clickhouse" class="flow-node absolute bg-gradient-to-br from-orange-500 to-orange-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 280px; left: 150px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-chart-line text-3xl mb-2"></i>
-                        <div class="font-bold">ClickHouse</div>
-                        <div class="text-xs opacity-80">Analytics DB</div>
-                    </div>
-                </div>
-
-                <!-- Row 4: Vehicle Agent -->
-                <div id="node-vehicle" class="flow-node absolute bg-gradient-to-br from-teal-500 to-teal-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 420px; left: 750px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-car text-3xl mb-2"></i>
-                        <div class="font-bold">Vehicle Agent</div>
-                        <div class="text-xs opacity-80">Rust + SQLite</div>
-                    </div>
-                </div>
-
-                <!-- Row 5: SDK -->
-                <div id="node-sdk" class="flow-node absolute bg-gradient-to-br from-pink-500 to-pink-700 text-white rounded-lg shadow-lg p-4" 
-                     style="top: 520px; left: 750px; width: 200px; z-index: 10;">
-                    <div class="text-center">
-                        <i class="fas fa-code text-3xl mb-2"></i>
-                        <div class="font-bold">Feature Flag SDK</div>
-                        <div class="text-xs opacity-80">C++/Python/Rust</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progress Timeline -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">
-                <i class="fas fa-tasks mr-2 text-green-600"></i>실행 단계
-            </h2>
-            <div class="flex items-center justify-between">
-                <div id="step-1" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">1. Admin 요청</div>
-                    <div class="text-xs">Feature 생성</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-2" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">2. API 검증</div>
-                    <div class="text-xs">Validation</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-3" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">3. DB 저장</div>
-                    <div class="text-xs">PostgreSQL</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-4" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">4. 캐시 갱신</div>
-                    <div class="text-xs">Redis Pub/Sub</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-5" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">5. 차량 동기화</div>
-                    <div class="text-xs">Delta Sync</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-6" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">6. SDK 평가</div>
-                    <div class="text-xs">Local Cache</div>
-                </div>
-                <div class="text-gray-400">→</div>
-                <div id="step-7" class="step-indicator flex-1 text-center py-3 rounded-lg mx-1 bg-gray-200">
-                    <div class="font-bold">7. 분석 수집</div>
-                    <div class="text-xs">ClickHouse</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Data Flow Details (2 columns) -->
-        <div class="grid grid-cols-2 gap-8 mb-8">
-            <!-- Left: Real-time Log -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-stream mr-2 text-blue-600"></i>실시간 로그
-                </h2>
-                <div id="logContainer" class="space-y-2 max-h-96 overflow-y-auto">
-                    <div class="text-gray-500 text-sm text-center py-8">
-                        시뮬레이션을 시작하면 로그가 표시됩니다.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Data Payload -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-code mr-2 text-purple-600"></i>데이터 페이로드
-                </h2>
-                <div id="payloadContainer" class="code-block max-h-96 overflow-y-auto">
-                    <pre class="text-sm"><span class="comment">// 시뮬레이션을 시작하면 데이터가 표시됩니다.</span></pre>
-                </div>
-            </div>
-        </div>
-
-        <!-- Metrics Dashboard -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">
-                <i class="fas fa-tachometer-alt mr-2 text-green-600"></i>성능 메트릭 (시뮬레이션)
-            </h2>
-            <div class="grid grid-cols-4 gap-6">
-                <div class="text-center p-4 bg-blue-50 rounded-lg">
-                    <div class="text-3xl font-bold text-blue-600" id="metric-latency">0ms</div>
-                    <div class="text-sm text-gray-600 mt-1">평균 지연시간</div>
-                </div>
-                <div class="text-center p-4 bg-green-50 rounded-lg">
-                    <div class="text-3xl font-bold text-green-600" id="metric-vehicles">0</div>
-                    <div class="text-sm text-gray-600 mt-1">동기화된 차량</div>
-                </div>
-                <div class="text-center p-4 bg-purple-50 rounded-lg">
-                    <div class="text-3xl font-bold text-purple-600" id="metric-evaluations">0</div>
-                    <div class="text-sm text-gray-600 mt-1">평가 횟수</div>
-                </div>
-                <div class="text-center p-4 bg-orange-50 rounded-lg">
-                    <div class="text-3xl font-bold text-orange-600" id="metric-cache">0%</div>
-                    <div class="text-sm text-gray-600 mt-1">캐시 적중률</div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <div class="max-w-7xl mx-auto mb-6">
+        <div class="glass-card p-2">
+            <div class="flex gap-2">
+                <button class="tab-button active" data-tab="current">
+                    <i class="fas fa-eye mr-2"></i>현재 현황
+                </button>
+                <button class="tab-button" data-tab="simulation">
+                    <i class="fas fa-play-circle mr-2"></i>시뮬레이션
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="max-w-7xl mx-auto">
+        
+        <!-- Current Status Tab -->
+        <div id="tab-current" class="tab-content">
+            
+            <!-- Real-time Metrics -->
+            <div class="glass-card p-6 mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-tachometer-alt mr-2 text-blue-400"></i>
+                    실시간 시스템 메트릭
+                </h2>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="metric-card">
+                        <div class="text-gray-400 text-sm mb-2">활성 Feature</div>
+                        <div class="metric-value" id="active-features">23</div>
+                        <div class="text-gray-500 text-xs mt-1">/ 35개 전체</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="text-gray-400 text-sm mb-2">온라인 차량</div>
+                        <div class="metric-value" id="online-vehicles">123,847</div>
+                        <div class="text-gray-500 text-xs mt-1">/ 125,000대</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="text-gray-400 text-sm mb-2">평가 지연시간</div>
+                        <div class="metric-value text-green-400" id="eval-latency">2.1ms</div>
+                        <div class="text-gray-500 text-xs mt-1">P95 목표: <50ms</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="text-gray-400 text-sm mb-2">오늘의 배포</div>
+                        <div class="metric-value text-blue-400" id="today-deployments">8</div>
+                        <div class="text-gray-500 text-xs mt-1">성공 7 / 롤백 1</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Features List -->
+            <div class="glass-card p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-white">
+                        <i class="fas fa-list mr-2 text-green-400"></i>
+                        현재 활성 Feature 목록
+                    </h2>
+                    <div class="flex gap-2">
+                        <span class="status-badge status-active">
+                            <i class="fas fa-circle mr-1"></i>Active (23)
+                        </span>
+                        <span class="status-badge status-testing">
+                            <i class="fas fa-circle mr-1"></i>Testing (8)
+                        </span>
+                        <span class="status-badge status-disabled">
+                            <i class="fas fa-circle mr-1"></i>Disabled (4)
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4" id="features-list">
+                    <!-- Feature cards will be dynamically inserted -->
+                </div>
+            </div>
+
+            <!-- E2E Flow Visualization -->
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-bold text-white mb-6">
+                    <i class="fas fa-project-diagram mr-2 text-purple-400"></i>
+                    End-to-End 제어 흐름 (실시간)
+                </h2>
+                
+                <div class="grid grid-cols-7 gap-4 items-center">
+                    <!-- Node 1: Admin Console -->
+                    <div class="flow-node" id="flow-admin">
+                        <div class="text-3xl mb-2">👤</div>
+                        <div class="font-bold text-white">Admin Console</div>
+                        <div class="text-xs text-gray-400 mt-1">Feature 설정</div>
+                        <div class="text-xs text-green-400 mt-2" id="admin-status">대기 중</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-1"></div>
+
+                    <!-- Node 2: FleetFlag API -->
+                    <div class="flow-node" id="flow-api">
+                        <div class="text-3xl mb-2">🔧</div>
+                        <div class="font-bold text-white">FleetFlag API</div>
+                        <div class="text-xs text-gray-400 mt-1">설정 저장</div>
+                        <div class="text-xs text-blue-400 mt-2" id="api-status">준비</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-2"></div>
+
+                    <!-- Node 3: Flipt Engine -->
+                    <div class="flow-node" id="flow-flipt">
+                        <div class="text-3xl mb-2">⚙️</div>
+                        <div class="font-bold text-white">Flipt Engine</div>
+                        <div class="text-xs text-gray-400 mt-1">규칙 처리</div>
+                        <div class="text-xs text-purple-400 mt-2" id="flipt-status">대기</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-3"></div>
+
+                    <!-- Node 4: PostgreSQL -->
+                    <div class="flow-node" id="flow-db">
+                        <div class="text-3xl mb-2">🗄️</div>
+                        <div class="font-bold text-white">PostgreSQL</div>
+                        <div class="text-xs text-gray-400 mt-1">데이터 저장</div>
+                        <div class="text-xs text-yellow-400 mt-2" id="db-status">동기화</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-4"></div>
+
+                    <!-- Node 5: Redis Cache -->
+                    <div class="flow-node" id="flow-redis">
+                        <div class="text-3xl mb-2">⚡</div>
+                        <div class="font-bold text-white">Redis Cache</div>
+                        <div class="text-xs text-gray-400 mt-1">캐시 업데이트</div>
+                        <div class="text-xs text-orange-400 mt-2" id="redis-status">갱신 중</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-5"></div>
+
+                    <!-- Node 6: Vehicle Agent -->
+                    <div class="flow-node" id="flow-vehicle">
+                        <div class="text-3xl mb-2">🚗</div>
+                        <div class="font-bold text-white">Vehicle Agent</div>
+                        <div class="text-xs text-gray-400 mt-1">Feature 평가</div>
+                        <div class="text-xs text-green-400 mt-2" id="vehicle-status">실행 중</div>
+                    </div>
+
+                    <div class="flow-arrow" id="arrow-6"></div>
+
+                    <!-- Node 7: ClickHouse -->
+                    <div class="flow-node" id="flow-analytics">
+                        <div class="text-3xl mb-2">📊</div>
+                        <div class="font-bold text-white">ClickHouse</div>
+                        <div class="text-xs text-gray-400 mt-1">로그 수집</div>
+                        <div class="text-xs text-cyan-400 mt-2" id="analytics-status">기록 중</div>
+                    </div>
+                </div>
+
+                <!-- Flow Statistics -->
+                <div class="mt-6 grid grid-cols-3 gap-4">
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400 mb-1">평균 E2E 처리 시간</div>
+                        <div class="text-2xl font-bold text-green-400">47ms</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400 mb-1">초당 처리 요청</div>
+                        <div class="text-2xl font-bold text-blue-400">2,847</div>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="text-sm text-gray-400 mb-1">에러율</div>
+                        <div class="text-2xl font-bold text-yellow-400">0.08%</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Simulation Tab -->
+        <div id="tab-simulation" class="tab-content hidden">
+            
+            <!-- Scenario Selection -->
+            <div class="glass-card p-6 mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-flask mr-2 text-yellow-400"></i>
+                    시뮬레이션 시나리오 선택
+                </h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <button class="scenario-btn p-4 bg-gray-800/50 rounded-lg border-2 border-transparent hover:border-blue-500 transition-all" data-scenario="deploy">
+                        <div class="text-3xl mb-2">🚀</div>
+                        <div class="font-bold text-white mb-2">신규 Feature 배포</div>
+                        <div class="text-sm text-gray-400">Admin → Vehicle 전체 흐름</div>
+                    </button>
+                    <button class="scenario-btn p-4 bg-gray-800/50 rounded-lg border-2 border-transparent hover:border-red-500 transition-all" data-scenario="killswitch">
+                        <div class="text-3xl mb-2">🚨</div>
+                        <div class="font-bold text-white mb-2">긴급 Kill Switch</div>
+                        <div class="text-sm text-gray-400">3시간 내 125,000대 비활성화</div>
+                    </button>
+                    <button class="scenario-btn p-4 bg-gray-800/50 rounded-lg border-2 border-transparent hover:border-green-500 transition-all" data-scenario="abtest">
+                        <div class="text-3xl mb-2">🧪</div>
+                        <div class="font-bold text-white mb-2">A/B 테스트</div>
+                        <div class="text-sm text-gray-400">50% 트래픽 분산 테스트</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Simulation Progress -->
+            <div class="glass-card p-6 mb-6" id="simulation-progress" style="display: none;">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>
+                    시뮬레이션 진행 중
+                </h2>
+                
+                <div class="mb-4">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-400" id="sim-step-name">초기화 중...</span>
+                        <span class="text-blue-400" id="sim-progress-text">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="sim-progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-4 items-center mb-6">
+                    <div class="flow-node" id="sim-admin">
+                        <div class="text-2xl">👤</div>
+                        <div class="text-xs mt-1">Admin</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-1"></div>
+                    <div class="flow-node" id="sim-api">
+                        <div class="text-2xl">🔧</div>
+                        <div class="text-xs mt-1">API</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-2"></div>
+                    <div class="flow-node" id="sim-flipt">
+                        <div class="text-2xl">⚙️</div>
+                        <div class="text-xs mt-1">Flipt</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-3"></div>
+                    <div class="flow-node" id="sim-db">
+                        <div class="text-2xl">🗄️</div>
+                        <div class="text-xs mt-1">DB</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-4"></div>
+                    <div class="flow-node" id="sim-redis">
+                        <div class="text-2xl">⚡</div>
+                        <div class="text-xs mt-1">Redis</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-5"></div>
+                    <div class="flow-node" id="sim-vehicle">
+                        <div class="text-2xl">🚗</div>
+                        <div class="text-xs mt-1">Vehicle</div>
+                    </div>
+                    <div class="flow-arrow" id="sim-arrow-6"></div>
+                    <div class="flow-node" id="sim-analytics">
+                        <div class="text-2xl">📊</div>
+                        <div class="text-xs mt-1">Analytics</div>
+                    </div>
+                </div>
+
+                <!-- Live Logs -->
+                <div class="bg-gray-900/50 rounded-lg p-4 max-h-64 overflow-y-auto" id="simulation-logs">
+                    <div class="text-sm text-gray-400 mb-2">실시간 로그</div>
+                    <!-- Logs will be dynamically inserted -->
+                </div>
+            </div>
+
+            <!-- Simulation Results -->
+            <div class="glass-card p-6" id="simulation-results" style="display: none;">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-check-circle mr-2 text-green-400"></i>
+                    시뮬레이션 완료
+                </h2>
+                <div class="grid grid-cols-4 gap-4" id="results-metrics">
+                    <!-- Results will be dynamically inserted -->
+                </div>
+                <div class="mt-4 text-center">
+                    <button id="reset-simulation" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white">
+                        <i class="fas fa-redo mr-2"></i>다시 시뮬레이션
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
     <script>
-        // Global state
-        let isRunning = false;
-        let currentStep = 0;
-        let logIndex = 0;
+        // Sample Features Data
+        const features = [
+            { id: 1, name: 'ADAS Level 3', status: 'active', rollout: 85, vehicles: 106250, p95: 42, asil: 'D' },
+            { id: 2, name: 'HDA2 고속도로 주행', status: 'testing', rollout: 30, vehicles: 37500, p95: 48, asil: 'C' },
+            { id: 3, name: '차선변경 보조 (LCA)', status: 'disabled', rollout: 0, vehicles: 0, p95: 0, asil: 'B' },
+            { id: 4, name: '배터리 충전 최적화', status: 'active', rollout: 100, vehicles: 125000, p95: 38, asil: 'A' },
+            { id: 5, name: 'AI 주차 보조', status: 'active', rollout: 65, vehicles: 81250, p95: 45, asil: 'B' },
+            { id: 6, name: '음성 인식 개선', status: 'active', rollout: 100, vehicles: 125000, p95: 35, asil: null },
+            { id: 7, name: '에너지 회생 제어', status: 'testing', rollout: 15, vehicles: 18750, p95: 52, asil: 'C' },
+            { id: 8, name: 'OTA 업데이트 v2.4', status: 'active', rollout: 92, vehicles: 115000, p95: 40, asil: null }
+        ];
 
-        // DOM elements
-        const startBtn = document.getElementById('startSimulation');
-        const resetBtn = document.getElementById('resetSimulation');
-        const logContainer = document.getElementById('logContainer');
-        const payloadContainer = document.getElementById('payloadContainer');
+        // Render Features List
+        function renderFeatures() {
+            const container = document.getElementById('features-list');
+            container.innerHTML = features.map(f => `
+                <div class="feature-card">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-white mb-1">${f.name}</h3>
+                            <div class="flex gap-2 mt-2">
+                                <span class="status-badge status-${f.status}">
+                                    ${f.status === 'active' ? 'Active' : f.status === 'testing' ? 'Testing' : 'Disabled'}
+                                </span>
+                                ${f.asil ? `<span class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">ASIL-${f.asil}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-2xl">${f.status === 'active' ? '🟢' : f.status === 'testing' ? '🟡' : '⚪'}</div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-400">Rollout</span>
+                            <span class="text-white font-semibold">${f.rollout}%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${f.rollout}%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>${f.vehicles.toLocaleString()}대 활성</span>
+                            ${f.p95 > 0 ? `<span>P95: ${f.p95}ms</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-        // Scenario data
+        // Tab Switching
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Update buttons
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            });
+        });
+
+        // Real-time Flow Animation (Current Status)
+        let flowInterval;
+        function startFlowAnimation() {
+            const nodes = ['admin', 'api', 'flipt', 'db', 'redis', 'vehicle', 'analytics'];
+            const arrows = ['arrow-1', 'arrow-2', 'arrow-3', 'arrow-4', 'arrow-5', 'arrow-6'];
+            let currentIndex = 0;
+
+            flowInterval = setInterval(() => {
+                // Remove all active classes
+                nodes.forEach(n => document.getElementById(`flow-${n}`)?.classList.remove('active'));
+                arrows.forEach(a => document.getElementById(a)?.classList.remove('active'));
+
+                // Add active to current
+                if (currentIndex < nodes.length) {
+                    document.getElementById(`flow-${nodes[currentIndex]}`)?.classList.add('active');
+                }
+                if (currentIndex < arrows.length) {
+                    document.getElementById(arrows[currentIndex])?.classList.add('active');
+                }
+
+                currentIndex++;
+                if (currentIndex >= nodes.length + arrows.length) {
+                    currentIndex = 0;
+                }
+            }, 800);
+        }
+
+        // Simulation
         const scenarios = {
-            'feature-creation': {
-                name: 'Feature 생성 및 배포',
+            deploy: {
+                name: '신규 Feature 배포',
                 steps: [
-                    {
-                        node: 'node-admin',
-                        arrow: 'arrow-1',
-                        step: 'step-1',
-                        title: 'Admin이 새 Feature Flag 생성',
-                        log: '[14:30:22] Admin (이성룡 부장) - POST /api/v1/flags',
-                        payload: {
-                            key: 'feature-voice-ai-gpt4o',
-                            name: '음성인식 AI (GPT-4o)',
-                            type: 'boolean',
-                            asil_level: 'ASIL-B',
-                            default_value: false,
-                            rollout_strategy: 'canary',
-                            target_percentage: 1
-                        },
-                        latency: 12,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-api',
-                        arrow: 'arrow-2',
-                        step: 'step-2',
-                        title: 'API Server가 요청 검증',
-                        log: '[14:30:23] API Server - Validation passed. ASIL-B requires team lead approval.',
-                        payload: {
-                            validation: 'success',
-                            checks: [
-                                { name: 'ASIL level', status: 'OK' },
-                                { name: 'BOM dependencies', status: 'OK' },
-                                { name: 'Approval required', status: 'PENDING' }
-                            ]
-                        },
-                        latency: 18,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-flipt',
-                        arrow: 'arrow-3',
-                        step: 'step-3',
-                        title: 'Flipt Engine에 Flag 등록',
-                        log: '[14:30:23] Flipt Engine - Flag registered with OpenFeature spec',
-                        payload: {
-                            flipt_id: 'flg_xyz789abc',
-                            namespace: 'production',
-                            evaluation_mode: 'server-side',
-                            rules: [
-                                { type: 'percentage', value: 1, description: 'Canary 1%' }
-                            ]
-                        },
-                        latency: 24,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-postgres',
-                        arrow: 'arrow-4',
-                        step: 'step-3',
-                        title: 'PostgreSQL에 메타데이터 저장',
-                        log: '[14:30:24] PostgreSQL - INSERT into flags table (ID: 1234)',
-                        payload: {
-                            query: 'INSERT INTO flags (key, name, type, asil_level, created_by, created_at) VALUES (...)',
-                            affected_rows: 1,
-                            transaction_time: '8ms'
-                        },
-                        latency: 32,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-redis',
-                        arrow: 'arrow-5',
-                        step: 'step-4',
-                        title: 'Redis Pub/Sub로 변경 알림',
-                        log: '[14:30:24] Redis - PUBLISH flag:update:feature-voice-ai-gpt4o',
-                        payload: {
-                            channel: 'flag:updates',
-                            message: {
-                                event: 'flag.created',
-                                flag_id: 1234,
-                                timestamp: '2026-02-01T14:30:24Z'
-                            },
-                            subscribers: 5243
-                        },
-                        latency: 35,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 95
-                    },
-                    {
-                        node: 'node-vehicle',
-                        arrow: 'arrow-6',
-                        step: 'step-5',
-                        title: '차량 Agent가 Delta Sync 수행',
-                        log: '[14:30:25] Vehicle Agent (VIN: KMHXX00BXPU123456) - Delta sync: 1 new flag',
-                        payload: {
-                            vin: 'KMHXX00BXPU123456',
-                            sync_type: 'delta',
-                            flags_updated: 1,
-                            local_cache_size: '12.4 MB',
-                            sync_duration: '143ms'
-                        },
-                        latency: 38,
-                        vehicles: 1250,
-                        evaluations: 0,
-                        cache: 97
-                    },
-                    {
-                        node: 'node-sdk',
-                        arrow: null,
-                        step: 'step-6',
-                        title: 'SDK가 로컬 캐시에서 평가',
-                        log: '[14:30:26] SDK - evaluate(feature-voice-ai-gpt4o) = false (not in 1% canary)',
-                        payload: {
-                            flag_key: 'feature-voice-ai-gpt4o',
-                            evaluation_result: false,
-                            reason: 'percentage_rollout',
-                            latency: '2.1ms',
-                            cache_hit: true
-                        },
-                        latency: 2.1,
-                        vehicles: 1250,
-                        evaluations: 4523,
-                        cache: 98
-                    },
-                    {
-                        node: 'node-clickhouse',
-                        arrow: 'arrow-7',
-                        step: 'step-7',
-                        title: 'ClickHouse에 텔레메트리 저장',
-                        log: '[14:30:27] ClickHouse - Batch insert: 4523 evaluation events',
-                        payload: {
-                            table: 'evaluation_events',
-                            rows_inserted: 4523,
-                            batch_duration: '54ms',
-                            compression_ratio: '12.3x'
-                        },
-                        latency: 2.1,
-                        vehicles: 1250,
-                        evaluations: 4523,
-                        cache: 98
-                    }
+                    { node: 'admin', arrow: 'arrow-1', log: 'Admin Console에서 Feature "ADAS Level 3" 활성화 요청', type: 'info', delay: 500 },
+                    { node: 'api', arrow: 'arrow-2', log: 'FleetFlag API가 요청 수신 (47ms)', type: 'success', delay: 800 },
+                    { node: 'flipt', arrow: 'arrow-3', log: 'Flipt Engine에서 규칙 처리 시작', type: 'info', delay: 1000 },
+                    { node: 'db', arrow: 'arrow-4', log: 'PostgreSQL에 Feature 설정 저장 완료', type: 'success', delay: 1200 },
+                    { node: 'redis', arrow: 'arrow-5', log: 'Redis Cache 갱신 (125,000대 동기화)', type: 'info', delay: 1500 },
+                    { node: 'vehicle', arrow: 'arrow-6', log: '차량 Agent가 새 설정 수신 및 평가 (2.1ms)', type: 'success', delay: 2000 },
+                    { node: 'analytics', arrow: null, log: 'ClickHouse에 배포 로그 기록', type: 'success', delay: 2200 }
                 ]
             },
-            'kill-switch': {
-                name: 'Kill Switch 긴급 발동',
+            killswitch: {
+                name: 'Kill Switch 긴급 차단',
                 steps: [
-                    {
-                        node: 'node-admin',
-                        arrow: 'arrow-1',
-                        step: 'step-1',
-                        title: 'Admin이 Kill Switch 발동',
-                        log: '[09:15:33] Admin (김철수 CTO) - POST /api/v1/flags/FLAG-2024-0523/kill-switch/activate',
-                        payload: {
-                            flag_id: 'FLAG-2024-0523',
-                            flag_name: '자율주행 L3 고속도로 모드',
-                            reason: 'Mobileye EyeQ5 센서 펌웨어 결함 발견. 차선 인식 오류.',
-                            scope: 'all_vehicles',
-                            approved_by: '김철수 CTO',
-                            two_factor_auth: 'verified'
-                        },
-                        latency: 8,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-api',
-                        arrow: 'arrow-2',
-                        step: 'step-2',
-                        title: 'API Server가 즉시 처리',
-                        log: '[09:15:33] API Server - EMERGENCY: Kill Switch activated for FLAG-2024-0523',
-                        payload: {
-                            priority: 'critical',
-                            validation: 'bypassed',
-                            approval_chain: 'CTO approved',
-                            estimated_impact: '12,847 vehicles'
-                        },
-                        latency: 12,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-postgres',
-                        arrow: 'arrow-4',
-                        step: 'step-3',
-                        title: 'DB에 Kill Switch 상태 기록',
-                        log: '[09:15:34] PostgreSQL - UPDATE flags SET kill_switch_active=true WHERE id=523',
-                        payload: {
-                            query: 'UPDATE flags SET kill_switch_active=true, kill_switch_reason=...',
-                            affected_rows: 1,
-                            audit_log_created: true
-                        },
-                        latency: 15,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-redis',
-                        arrow: 'arrow-5',
-                        step: 'step-4',
-                        title: 'Redis Pub/Sub 긴급 브로드캐스트',
-                        log: '[09:15:34] Redis - PUBLISH kill-switch:FLAG-2024-0523 (priority: CRITICAL)',
-                        payload: {
-                            channel: 'kill-switch',
-                            priority: 'CRITICAL',
-                            ttl: 0,
-                            subscribers: 12847,
-                            message: {
-                                flag_id: 'FLAG-2024-0523',
-                                action: 'disable_immediately'
-                            }
-                        },
-                        latency: 18,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-vehicle',
-                        arrow: 'arrow-6',
-                        step: 'step-5',
-                        title: 'WebSocket으로 전 차량 푸시',
-                        log: '[09:15:35] Vehicle Agents - WebSocket push to 12,847 vehicles',
-                        payload: {
-                            protocol: 'wss://fleetflag.azure.hyundai.com/ws',
-                            vehicles_online: 12800,
-                            vehicles_offline: 47,
-                            push_duration: '2.8 seconds',
-                            ack_received: 12800
-                        },
-                        latency: 20,
-                        vehicles: 12800,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-sdk',
-                        arrow: null,
-                        step: 'step-6',
-                        title: 'SDK가 즉시 강제 비활성화',
-                        log: '[09:15:36] SDK - KILL_SWITCH: FLAG-2024-0523 = false (override local cache)',
-                        payload: {
-                            flag_key: 'FLAG-2024-0523',
-                            previous_value: true,
-                            new_value: false,
-                            override_reason: 'kill_switch_active',
-                            cache_invalidated: true
-                        },
-                        latency: 0.5,
-                        vehicles: 12800,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-clickhouse',
-                        arrow: 'arrow-7',
-                        step: 'step-7',
-                        title: 'Slack 알림 및 감사 로그',
-                        log: '[09:15:37] Notification - Slack alert sent to #safety-critical',
-                        payload: {
-                            slack_channel: '#safety-critical',
-                            alert_level: 'P1',
-                            message: '🔴 Kill Switch activated: 자율주행 L3 (12,847 vehicles affected)',
-                            audit_log_id: 'audit_20260201_091537',
-                            propagation_time: '2h 43m (target: 3h)'
-                        },
-                        latency: 0.5,
-                        vehicles: 12847,
-                        evaluations: 0,
-                        cache: 0
-                    }
+                    { node: 'admin', arrow: 'arrow-1', log: '🚨 긴급! LCA 결함 감지 - Kill Switch 발동', type: 'error', delay: 300 },
+                    { node: 'api', arrow: 'arrow-2', log: 'FleetFlag API 긴급 모드 활성화', type: 'warning', delay: 500 },
+                    { node: 'flipt', arrow: 'arrow-3', log: 'Flipt Engine에서 긴급 규칙 적용', type: 'warning', delay: 700 },
+                    { node: 'db', arrow: 'arrow-4', log: 'PostgreSQL에 Kill Switch 이벤트 기록', type: 'error', delay: 900 },
+                    { node: 'redis', arrow: 'arrow-5', log: 'Redis 최우선 순위 캐시 푸시 (12,500 msg/s)', type: 'warning', delay: 1200 },
+                    { node: 'vehicle', arrow: 'arrow-6', log: '125,000대 차량에 비활성화 명령 전파 중...', type: 'warning', delay: 1800 },
+                    { node: 'analytics', arrow: null, log: 'ClickHouse에 긴급 조치 로그 수집', type: 'error', delay: 2000 }
                 ]
             },
-            'ab-test': {
-                name: 'A/B 테스트 실행',
+            abtest: {
+                name: 'A/B 테스트 시작',
                 steps: [
-                    {
-                        node: 'node-admin',
-                        arrow: 'arrow-1',
-                        step: 'step-1',
-                        title: 'Admin이 A/B 테스트 시작',
-                        log: '[10:00:00] Admin (박지현 책임) - POST /api/v1/experiments',
-                        payload: {
-                            experiment_id: 'exp_20260201_001',
-                            name: '음성인식 엔진 비교 (GPT-4o vs Whisper)',
-                            control_flag: 'feature-voice-ai-legacy',
-                            variant_a_flag: 'feature-voice-ai-gpt4o',
-                            variant_b_flag: 'feature-voice-ai-whisper',
-                            traffic_split: { control: 33, variant_a: 33, variant_b: 34 },
-                            duration_days: 14
-                        },
-                        latency: 15,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-api',
-                        arrow: 'arrow-2',
-                        step: 'step-2',
-                        title: 'API Server가 Sticky Session 설정',
-                        log: '[10:00:01] API Server - Sticky assignment: VIN-based hashing for consistency',
-                        payload: {
-                            assignment_strategy: 'vin_hash',
-                            total_vehicles: 10234,
-                            control_group: 3411,
-                            variant_a_group: 3411,
-                            variant_b_group: 3412
-                        },
-                        latency: 22,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-postgres',
-                        arrow: 'arrow-4',
-                        step: 'step-3',
-                        title: 'DB에 실험 설정 저장',
-                        log: '[10:00:02] PostgreSQL - INSERT into experiments table',
-                        payload: {
-                            experiment_id: 'exp_20260201_001',
-                            status: 'running',
-                            start_time: '2026-02-01T10:00:00Z',
-                            expected_end: '2026-02-15T10:00:00Z'
-                        },
-                        latency: 28,
-                        vehicles: 0,
-                        evaluations: 0,
-                        cache: 0
-                    },
-                    {
-                        node: 'node-vehicle',
-                        arrow: 'arrow-6',
-                        step: 'step-5',
-                        title: '차량별 그룹 할당',
-                        log: '[10:00:03] Vehicle Agents - Received experiment assignment',
-                        payload: {
-                            vin: 'KMHXX00BXPU123456',
-                            experiment_id: 'exp_20260201_001',
-                            assigned_group: 'variant_a',
-                            sticky_until: '2026-02-15T10:00:00Z'
-                        },
-                        latency: 32,
-                        vehicles: 10234,
-                        evaluations: 0,
-                        cache: 97
-                    },
-                    {
-                        node: 'node-sdk',
-                        arrow: null,
-                        step: 'step-6',
-                        title: 'SDK가 그룹별 평가 실행',
-                        log: '[10:00:05] SDK - evaluate() returns variant_a flag value',
-                        payload: {
-                            experiment_id: 'exp_20260201_001',
-                            assigned_group: 'variant_a',
-                            flag_evaluated: 'feature-voice-ai-gpt4o',
-                            result: true,
-                            metadata: { group: 'variant_a', sticky: true }
-                        },
-                        latency: 2.8,
-                        vehicles: 10234,
-                        evaluations: 127543,
-                        cache: 98
-                    },
-                    {
-                        node: 'node-clickhouse',
-                        arrow: 'arrow-7',
-                        step: 'step-7',
-                        title: 'ClickHouse에 메트릭 수집',
-                        log: '[14 days later] ClickHouse - Experiment results analysis complete',
-                        payload: {
-                            experiment_id: 'exp_20260201_001',
-                            duration: '14 days',
-                            total_evaluations: 2847231,
-                            results: {
-                                control: { recognition_rate: 94.2, satisfaction: 3.8 },
-                                variant_a: { recognition_rate: 98.7, satisfaction: 4.6 },
-                                variant_b: { recognition_rate: 97.1, satisfaction: 4.2 }
-                            },
-                            statistical_significance: { p_value: 0.001, confidence: 95 },
-                            winner: 'variant_a'
-                        },
-                        latency: 2.8,
-                        vehicles: 10234,
-                        evaluations: 2847231,
-                        cache: 98
-                    }
+                    { node: 'admin', arrow: 'arrow-1', log: 'A/B Test 설정: 배터리 충전 알고리즘 (50% vs 50%)', type: 'info', delay: 500 },
+                    { node: 'api', arrow: 'arrow-2', log: 'FleetFlag API에서 Variant 분배 로직 생성', type: 'success', delay: 800 },
+                    { node: 'flipt', arrow: 'arrow-3', log: 'Flipt Engine에서 트래픽 분산 규칙 적용', type: 'info', delay: 1000 },
+                    { node: 'db', arrow: 'arrow-4', log: 'PostgreSQL에 A/B Test 메타데이터 저장', type: 'success', delay: 1200 },
+                    { node: 'redis', arrow: 'arrow-5', log: 'Redis에 Variant 할당표 캐싱', type: 'info', delay: 1400 },
+                    { node: 'vehicle', arrow: 'arrow-6', log: '62,500대 → Variant A, 62,500대 → Variant B', type: 'success', delay: 2000 },
+                    { node: 'analytics', arrow: null, log: 'ClickHouse에서 실시간 결과 분석 시작', type: 'success', delay: 2200 }
                 ]
             }
         };
 
-        // Start simulation
-        startBtn.addEventListener('click', async () => {
-            if (isRunning) return;
+        let currentSimulation = null;
+        let simStepIndex = 0;
+
+        document.querySelectorAll('.scenario-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const scenario = btn.dataset.scenario;
+                currentSimulation = scenarios[scenario];
+                simStepIndex = 0;
+
+                // Show progress section
+                document.getElementById('simulation-progress').style.display = 'block';
+                document.getElementById('simulation-results').style.display = 'none';
+                document.getElementById('sim-step-name').textContent = currentSimulation.name;
+                document.getElementById('simulation-logs').innerHTML = '<div class="text-sm text-gray-400 mb-2">실시간 로그</div>';
+
+                // Reset nodes
+                ['admin', 'api', 'flipt', 'db', 'redis', 'vehicle', 'analytics'].forEach(n => {
+                    document.getElementById(`sim-${n}`)?.classList.remove('active');
+                });
+                ['arrow-1', 'arrow-2', 'arrow-3', 'arrow-4', 'arrow-5', 'arrow-6'].forEach(a => {
+                    document.getElementById(`sim-${a}`)?.classList.remove('active');
+                });
+
+                // Run simulation
+                await runSimulation();
+            });
+        });
+
+        async function runSimulation() {
+            const steps = currentSimulation.steps;
             
-            isRunning = true;
-            currentStep = 0;
-            startBtn.disabled = true;
-            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            
-            const selectedScenario = document.querySelector('input[name="scenario"]:checked').value;
-            const scenario = scenarios[selectedScenario];
-            
-            // Clear previous state
-            resetSimulation();
-            
-            // Run each step
-            for (let i = 0; i < scenario.steps.length; i++) {
-                const step = scenario.steps[i];
-                currentStep = i;
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                const progress = Math.round(((i + 1) / steps.length) * 100);
                 
-                // Activate current node
-                activateNode(step.node);
-                if (step.arrow) activateArrow(step.arrow);
-                activateStep(step.step);
+                // Update progress
+                document.getElementById('sim-progress-text').textContent = `${progress}%`;
+                document.getElementById('sim-progress-bar').style.width = `${progress}%`;
+                
+                // Activate node
+                document.getElementById(`sim-${step.node}`)?.classList.add('active');
+                if (step.arrow) {
+                    document.getElementById(`sim-${step.arrow}`)?.classList.add('active');
+                }
                 
                 // Add log
-                addLog(step.log, 'info');
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-entry log-${step.type}`;
+                logDiv.innerHTML = `
+                    <span class="text-xs text-gray-500">[${new Date().toLocaleTimeString()}]</span>
+                    <span class="ml-2">${step.log}</span>
+                `;
+                document.getElementById('simulation-logs').appendChild(logDiv);
+                document.getElementById('simulation-logs').scrollTop = document.getElementById('simulation-logs').scrollHeight;
                 
-                // Update payload
-                updatePayload(step.payload);
-                
-                // Update metrics
-                updateMetrics(step.latency, step.vehicles, step.evaluations, step.cache);
-                
-                // Wait before next step
-                await sleep(2000);
-                
-                // Deactivate
-                deactivateNode(step.node);
-                if (step.arrow) deactivateArrow(step.arrow);
-                completeStep(step.step);
+                await new Promise(resolve => setTimeout(resolve, step.delay));
             }
-            
-            addLog('✅ 시뮬레이션 완료!', 'success');
-            startBtn.disabled = false;
-            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            isRunning = false;
+
+            // Show results
+            setTimeout(() => {
+                document.getElementById('simulation-progress').style.display = 'none';
+                document.getElementById('simulation-results').style.display = 'block';
+                
+                const resultsMetrics = [
+                    { label: '총 소요 시간', value: `${(steps.reduce((sum, s) => sum + s.delay, 0) / 1000).toFixed(1)}초`, color: 'blue' },
+                    { label: '처리된 요청', value: '125,000건', color: 'green' },
+                    { label: '평균 지연시간', value: '47ms', color: 'yellow' },
+                    { label: '성공률', value: '99.97%', color: 'green' }
+                ];
+                
+                document.getElementById('results-metrics').innerHTML = resultsMetrics.map(m => `
+                    <div class="metric-card">
+                        <div class="text-gray-400 text-sm mb-2">${m.label}</div>
+                        <div class="text-2xl font-bold text-${m.color}-400">${m.value}</div>
+                    </div>
+                `).join('');
+            }, 500);
+        }
+
+        document.getElementById('reset-simulation')?.addEventListener('click', () => {
+            document.getElementById('simulation-results').style.display = 'none';
         });
 
-        // Reset simulation
-        resetBtn.addEventListener('click', () => {
-            resetSimulation();
-        });
-
-        function resetSimulation() {
-            currentStep = 0;
-            logIndex = 0;
-            
-            // Clear logs
-            logContainer.innerHTML = '<div class="text-gray-500 text-sm text-center py-8">시뮬레이션을 시작하면 로그가 표시됩니다.</div>';
-            
-            // Clear payload
-            payloadContainer.innerHTML = '<pre class="text-sm"><span class="comment">// 시뮬레이션을 시작하면 데이터가 표시됩니다.</span></pre>';
-            
-            // Reset metrics
-            document.getElementById('metric-latency').textContent = '0ms';
-            document.getElementById('metric-vehicles').textContent = '0';
-            document.getElementById('metric-evaluations').textContent = '0';
-            document.getElementById('metric-cache').textContent = '0%';
-            
-            // Reset all nodes
-            document.querySelectorAll('.flow-node').forEach(node => {
-                node.classList.remove('active');
-            });
-            
-            // Reset all arrows
-            document.querySelectorAll('.flow-arrow').forEach(arrow => {
-                arrow.classList.remove('active');
-            });
-            
-            // Reset all steps
-            document.querySelectorAll('.step-indicator').forEach(step => {
-                step.classList.remove('active', 'completed');
-            });
-        }
-
-        function activateNode(nodeId) {
-            const node = document.getElementById(nodeId);
-            if (node) {
-                node.classList.add('active');
-            }
-        }
-
-        function deactivateNode(nodeId) {
-            const node = document.getElementById(nodeId);
-            if (node) {
-                setTimeout(() => {
-                    node.classList.remove('active');
-                }, 500);
-            }
-        }
-
-        function activateArrow(arrowId) {
-            const arrow = document.getElementById(arrowId);
-            if (arrow) {
-                arrow.classList.add('active');
-                arrow.setAttribute('marker-end', 'url(#arrowhead-active)');
-            }
-        }
-
-        function deactivateArrow(arrowId) {
-            const arrow = document.getElementById(arrowId);
-            if (arrow) {
-                setTimeout(() => {
-                    arrow.classList.remove('active');
-                    arrow.setAttribute('marker-end', 'url(#arrowhead)');
-                }, 500);
-            }
-        }
-
-        function activateStep(stepId) {
-            const step = document.getElementById(stepId);
-            if (step) {
-                step.classList.add('active');
-            }
-        }
-
-        function completeStep(stepId) {
-            const step = document.getElementById(stepId);
-            if (step) {
-                step.classList.remove('active');
-                step.classList.add('completed');
-            }
-        }
-
-        function addLog(message, type = 'info') {
-            if (logIndex === 0) {
-                logContainer.innerHTML = '';
-            }
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry flex items-start space-x-2 p-2 rounded text-sm';
-            
-            let icon = 'fa-info-circle';
-            let bgColor = 'bg-blue-50';
-            let textColor = 'text-blue-800';
-            
-            if (type === 'success') {
-                icon = 'fa-check-circle';
-                bgColor = 'bg-green-50';
-                textColor = 'text-green-800';
-            } else if (type === 'error') {
-                icon = 'fa-exclamation-circle';
-                bgColor = 'bg-red-50';
-                textColor = 'text-red-800';
-            }
-            
-            logEntry.classList.add(bgColor);
-            logEntry.innerHTML = `
-                <i class="fas ${icon} ${textColor} mt-0.5"></i>
-                <div class="${textColor} flex-1">${message}</div>
-            `;
-            
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-            logIndex++;
-        }
-
-        function updatePayload(data) {
-            const formatted = JSON.stringify(data, null, 2);
-            const highlighted = formatted
-                .replace(/"([^"]+)":/g, '<span class="keyword">"$1"</span>:')
-                .replace(/: "([^"]+)"/g, ': <span class="string">"$1"</span>')
-                .replace(/: (\d+)/g, ': <span class="highlight">$1</span>')
-                .replace(/: (true|false)/g, ': <span class="highlight">$1</span>');
-            
-            payloadContainer.innerHTML = `<pre class="text-sm">${highlighted}</pre>`;
-        }
-
-        function updateMetrics(latency, vehicles, evaluations, cache) {
-            document.getElementById('metric-latency').textContent = latency + 'ms';
-            document.getElementById('metric-vehicles').textContent = vehicles.toLocaleString();
-            document.getElementById('metric-evaluations').textContent = evaluations.toLocaleString();
-            document.getElementById('metric-cache').textContent = cache + '%';
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        // Initialize
+        renderFeatures();
+        startFlowAnimation();
     </script>
 </body>
 </html>
