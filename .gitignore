@@ -1,0 +1,31 @@
+# FleetFlag Specification - .gitignore
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Editor Files
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary Files
+*.tmp
+*.bak
+*.backup
+~*
+
+# Compiled Files
+*.pdf
+*.docx
+*.pptx
+
+# Logs
+*.log
+
+# Personal Notes
+notes/
+drafts/
