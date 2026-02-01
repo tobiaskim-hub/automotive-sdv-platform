@@ -143,7 +143,7 @@
     <section id="overview" class="mx-6 mt-6">
         <div class="grid grid-cols-4 gap-6">
             <div class="stat-card text-center">
-                <div class="stat-value">9</div>
+                <div class="stat-value">10</div>
                 <div class="text-sm text-gray-400 mt-2">Mock-UI Prototypes</div>
             </div>
             <div class="stat-card text-center">
@@ -161,14 +161,75 @@
         </div>
     </section>
 
+    <!-- Featured: Crisis Scenario -->
+    <section class="mx-6 mt-8">
+        <div class="glass-card p-8 border-2 border-red-500/50">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="badge badge-new">FEATURED</span>
+                        <span class="badge bg-red-500/20 text-red-400">MUST SEE</span>
+                    </div>
+                    <h3 class="text-3xl font-bold text-white mb-2">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                        긴급 상황 대응 시뮬레이션
+                    </h3>
+                    <p class="text-gray-300 text-lg">
+                        실제 위기 상황에서 Feature Flag가 어떻게 <strong class="text-red-400">₩500억</strong>을 절감하는지 체험하세요
+                    </p>
+                </div>
+                <a href="00-crisis-scenario.html" class="demo-button px-8 py-4 rounded-xl font-bold text-white text-xl flex items-center gap-3 hover:scale-105 transition-transform" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+                    <i class="fas fa-play-circle"></i>
+                    지금 체험하기
+                </a>
+            </div>
+            <div class="grid grid-cols-4 gap-4 mt-6">
+                <div class="text-center p-4 bg-gray-800/50 rounded-lg border border-red-500/30">
+                    <div class="text-3xl font-bold text-red-400">3시간</div>
+                    <div class="text-sm text-gray-400 mt-1">vs 6개월</div>
+                </div>
+                <div class="text-center p-4 bg-gray-800/50 rounded-lg border border-red-500/30">
+                    <div class="text-3xl font-bold text-green-400">₩500억</div>
+                    <div class="text-sm text-gray-400 mt-1">절감 효과</div>
+                </div>
+                <div class="text-center p-4 bg-gray-800/50 rounded-lg border border-red-500/30">
+                    <div class="text-3xl font-bold text-yellow-400">125k대</div>
+                    <div class="text-sm text-gray-400 mt-1">원격 제어</div>
+                </div>
+                <div class="text-center p-4 bg-gray-800/50 rounded-lg border border-red-500/30">
+                    <div class="text-3xl font-bold text-blue-400">99.97%</div>
+                    <div class="text-sm text-gray-400 mt-1">성공률</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Mock-UI Gallery -->
     <section id="mock-ui" class="mx-6 mt-8">
         <div class="mb-6">
             <h3 class="text-3xl font-bold text-white mb-2">Interactive Mock-UI Collection</h3>
-            <p class="text-gray-400">9개의 인터랙티브 UI 프로토타입으로 FleetFlag 시스템을 체험하세요</p>
+            <p class="text-gray-400">10개의 인터랙티브 UI 프로토타입으로 FleetFlag 시스템을 체험하세요</p>
         </div>
 
         <div class="grid grid-cols-3 gap-6">
+            <!-- 0. Crisis Scenario -->
+            <a href="00-crisis-scenario.html" class="glass-card p-6 block relative border-2 border-red-500/30">
+                <span class="badge badge-new absolute top-4 right-4">FEATURED</span>
+                <div class="flex items-start space-x-4">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+                        <i class="fas fa-exclamation-triangle text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-lg font-bold text-white mb-2">Crisis Response</h4>
+                        <p class="text-sm text-gray-400 mb-3">3시간 vs 6개월 위기 대응 실시간 시뮬레이션</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="badge bg-red-500/20 text-red-400">₩500억 절감</span>
+                            <span class="badge bg-orange-500/20 text-orange-400">Kill Switch</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
             <!-- 1. BOM Dependency Matrix -->
             <a href="01-bom-dependency-matrix.html" class="glass-card p-6 block">
                 <div class="flex items-start space-x-4">
