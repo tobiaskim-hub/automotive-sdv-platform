@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - Rollout Strategy Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stage-card {
+            transition: all 0.3s ease;
+        }
+        .stage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .progress-bar-animated {
+            animation: progress-animation 1.5s ease-in-out infinite;
+        }
+        @keyframes progress-animation {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .vin-chip {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-[#002c5f] text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-layer-group text-2xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">Rollout Strategy Editor</h1>
+                        <p class="text-sm text-blue-200">단계별 점진적 배포 전략 설계 | BOM 의존성 기반 자동 타겟팅</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-700">
+                        <i class="fas fa-save mr-2"></i>임시 저장
+                    </button>
+                    <button class="bg-[#00aad2] px-4 py-2 rounded hover:bg-[#0099bb]">
+                        <i class="fas fa-rocket mr-2"></i>배포 시작
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Feature Flag Info -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <span class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">ACTIVE</span>
+                        <span class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold">ASIL-B</span>
+                        <span class="bg-purple-600 text-white px-3 py-1 rounded text-sm font-bold">A/B TEST</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">FLAG-2024-0812: 차세대 음성인식 AI 비서 (딥러닝 기반)</h2>
+                    <p class="text-gray-600 mb-4">
+                        OpenAI Whisper 기반 음성인식 엔진 적용. 기존 대비 인식률 95% → 99% 향상. 
+                        17개 방언 지원 및 실시간 번역 기능 추가. HW 요구사항: HPC 컨테이너 4GB+ RAM.
+                    </p>
+                    <div class="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <div class="text-gray-500">생성일</div>
+                            <div class="font-bold">2026-01-15</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">담당자</div>
+                            <div class="font-bold">박지현 책임 (SW Platform)</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">대상 차량</div>
+                            <div class="font-bold text-blue-600">125,342대 (전체)</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">BOM 호환성</div>
+                            <div class="font-bold text-green-600">✓ 87% 호환 (109,048대)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ml-6">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect fill='%23e0f2fe' width='120' height='120'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%230369a1'%3EICON%3C/text%3E%3C/svg%3E" 
+                         alt="Feature Icon" class="rounded-lg shadow">
+                </div>
+            </div>
+        </div>
+
+        <!-- Rollout Configuration -->
+        <div class="grid grid-cols-3 gap-8 mb-8">
+            <!-- Left: Strategy Settings -->
+            <div class="col-span-2 space-y-6">
+                <!-- Strategy Type Selection -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-cogs mr-2 text-blue-600"></i>배포 전략 선택
+                    </h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <label class="border-2 border-blue-600 bg-blue-50 rounded-lg p-4 cursor-pointer">
+                            <input type="radio" name="strategy" class="mb-2" checked>
+                            <div class="font-bold text-gray-900">단계별 Canary</div>
+                            <div class="text-xs text-gray-600 mt-1">1% → 5% → 10% → 50% → 100%</div>
+                            <div class="text-xs text-blue-600 mt-2">✓ 권장 (안전성 중시)</div>
+                        </label>
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-gray-400">
+                            <input type="radio" name="strategy" class="mb-2">
+                            <div class="font-bold text-gray-900">Blue-Green</div>
+                            <div class="text-xs text-gray-600 mt-1">50% A/B 테스트</div>
+                            <div class="text-xs text-gray-600 mt-2">데이터 비교 목적</div>
+                        </label>
+                        <label class="border-2 border-gray-300 rounded-lg p-4 cursor-pointer hover:border-gray-400">
+                            <input type="radio" name="strategy" class="mb-2">
+                            <div class="font-bold text-gray-900">Big Bang</div>
+                            <div class="text-xs text-gray-600 mt-1">즉시 100% 배포</div>
+                            <div class="text-xs text-red-600 mt-2">⚠ 위험 (비권장)</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Stage Configuration -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-tasks mr-2 text-green-600"></i>배포 단계 설정
+                        </h3>
+                        <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            <i class="fas fa-plus mr-1"></i>단계 추가
+                        </button>
+                    </div>
+
+                    <!-- Stage 1 -->
+                    <div class="stage-card border-2 border-green-600 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</span>
+                                <div>
+                                    <div class="font-bold text-gray-900">Stage 1: Internal Testing (내부 검증)</div>
+                                    <div class="text-sm text-gray-600">타겟: 1% (약 1,253대)</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+                                <button class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <label class="text-xs text-gray-600 block mb-1">타겟 비율</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="range" min="0" max="100" value="1" class="flex-1">
+                                    <input type="number" value="1" class="w-16 border rounded px-2 py-1 text-sm">
+                                    <span class="text-sm">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-600 block mb-1">대기 시간</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" value="24" class="flex-1 border rounded px-2 py-1 text-sm">
+                                    <select class="border rounded px-2 py-1 text-sm">
+                                        <option>시간</option>
+                                        <option>일</option>
+                                        <option>주</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-xs text-gray-600 block mb-1">타겟팅 규칙</label>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">지역: 서울/경기 (사내 차량)</span>
+                                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs">VIN: 화이트리스트 (127대)</span>
+                                <button class="text-blue-600 text-xs hover:underline">+ 규칙 추가</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
+                            <div class="font-bold text-yellow-900 mb-1">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>자동 롤백 조건
+                            </div>
+                            <div class="space-y-1 text-gray-700">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2" checked>
+                                    <span>오류율 &gt; 5% (10분 연속)</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2" checked>
+                                    <span>크래시 발생 &gt; 10건</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="mr-2">
+                                    <span>사용자 만족도 &lt; 3.0 (5점 척도)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2 -->
+                    <div class="stage-card border-2 border-blue-600 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">2</span>
+                                <div>
+                                    <div class="font-bold text-gray-900">Stage 2: Early Adopters (얼리어답터)</div>
+                                    <div class="text-sm text-gray-600">타겟: 5% (약 6,267대)</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+                                <button class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <label class="text-xs text-gray-600 block mb-1">타겟 비율</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="range" min="0" max="100" value="5" class="flex-1">
+                                    <input type="number" value="5" class="w-16 border rounded px-2 py-1 text-sm">
+                                    <span class="text-sm">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-600 block mb-1">대기 시간</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" value="72" class="flex-1 border rounded px-2 py-1 text-sm">
+                                    <select class="border rounded px-2 py-1 text-sm">
+                                        <option>시간</option>
+                                        <option>일</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-xs text-gray-600 block mb-1">타겟팅 규칙</label>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">모델: GN7, G90 (2026)</span>
+                                <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs">SW 버전: ≥ v5.2.0</span>
+                                <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-xs">HW: HPC RAM ≥ 4GB</span>
+                                <button class="text-blue-600 text-xs hover:underline">+ 규칙 추가</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 border border-green-300 rounded p-3 text-sm">
+                            <div class="font-bold text-green-900 mb-1">
+                                <i class="fas fa-check-circle mr-1"></i>승인 조건 (다음 단계 진행)
+                            </div>
+                            <div class="space-y-1 text-gray-700">
+                                <div>• 오류율 &lt; 1% (24시간 연속)</div>
+                                <div>• 긍정 피드백 &gt; 80%</div>
+                                <div>• 수동 승인: 박지현 책임 (SW Platform)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3 -->
+                    <div class="stage-card border-2 border-gray-300 rounded-lg p-4 mb-4 opacity-60">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <span class="bg-gray-400 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</span>
+                                <div>
+                                    <div class="font-bold text-gray-900">Stage 3: General Rollout (일반 배포)</div>
+                                    <div class="text-sm text-gray-600">타겟: 50% → 100% (자동 확대)</div>
+                                </div>
+                            </div>
+                            <span class="text-gray-500 text-sm">대기 중</span>
+                        </div>
+                        <div class="text-sm text-gray-500">Stage 2 완료 후 자동 진행</div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-sliders-h mr-2 text-purple-600"></i>고급 설정
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" checked>
+                                <span class="font-medium text-gray-900">BOM 의존성 자동 검증</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-6">
+                                대상 차량의 HW BOM을 자동 확인하여 호환되지 않는 차량은 자동 제외
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" checked>
+                                <span class="font-medium text-gray-900">Sticky Session (VIN 기반 고정)</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-6">
+                                동일 차량(VIN)은 동일 실험 그룹에 고정 배정 (A/B 테스트 일관성)
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox">
+                                <span class="font-medium text-gray-900">오프라인 모드 사전 푸시</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-6">
+                                터널/지하 주차장 등 오프라인 시에도 작동하도록 설정 파일을 7일간 로컬 캐시
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" checked>
+                                <span class="font-medium text-gray-900">텔레메트리 자동 수집</span>
+                            </label>
+                            <p class="text-sm text-gray-600 ml-6">
+                                기능 사용 빈도, 오류 로그, 사용자 피드백을 자동 수집하여 ClickHouse로 전송
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Slack 알림 채널</label>
+                            <select class="w-full border border-gray-300 rounded px-3 py-2">
+                                <option>#sw-platform-deploy</option>
+                                <option>#feature-flags</option>
+                                <option>#safety-critical</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Preview & Simulation -->
+            <div class="space-y-6">
+                <!-- Target Vehicle Preview -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-car mr-2 text-blue-600"></i>대상 차량 미리보기
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">전체 차량</span>
+                                <span class="font-bold text-gray-900">125,342대</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-gray-400 h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">BOM 호환</span>
+                                <span class="font-bold text-green-600">109,048대 (87%)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 87%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">Stage 1 배포</span>
+                                <span class="font-bold text-blue-600">1,090대 (1%)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 1%"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-red-50 rounded p-3 text-sm">
+                            <div class="font-bold text-red-900 mb-2">
+                                <i class="fas fa-times-circle mr-1"></i>제외 차량 (16,294대)
+                            </div>
+                            <div class="space-y-1 text-gray-700">
+                                <div>• HW 미달: 12,843대 (HPC RAM &lt; 4GB)</div>
+                                <div>• SW 구버전: 2,451대 (v4.x)</div>
+                                <div>• 지역 제한: 1,000대 (중국/러시아)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Simulation -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-clock mr-2 text-orange-600"></i>배포 타임라인 (예상)
+                    </h3>
+                    <div class="relative border-l-2 border-gray-300 pl-6 space-y-6">
+                        <div class="relative">
+                            <div class="absolute w-4 h-4 bg-green-600 rounded-full -left-[30px]"></div>
+                            <div class="text-xs text-gray-500">D+0 (즉시)</div>
+                            <div class="font-bold text-gray-900">Stage 1 시작</div>
+                            <div class="text-sm text-gray-600">1,090대 (1%)</div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="absolute w-4 h-4 bg-blue-600 rounded-full -left-[30px]"></div>
+                            <div class="text-xs text-gray-500">D+1 (24시간 후)</div>
+                            <div class="font-bold text-gray-900">Stage 2 시작</div>
+                            <div class="text-sm text-gray-600">5,452대 (5%)</div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="absolute w-4 h-4 bg-purple-600 rounded-full -left-[30px]"></div>
+                            <div class="text-xs text-gray-500">D+4 (72시간 후)</div>
+                            <div class="font-bold text-gray-900">Stage 3 시작</div>
+                            <div class="text-sm text-gray-600">54,524대 (50%)</div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="absolute w-4 h-4 bg-gray-400 rounded-full -left-[30px]"></div>
+                            <div class="text-xs text-gray-500">D+7 (168시간 후)</div>
+                            <div class="font-bold text-gray-900">100% 완료</div>
+                            <div class="text-sm text-gray-600">109,048대 (전체)</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-blue-50 rounded p-3 text-sm text-blue-900">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        예상 배포 기간: <strong>7일</strong> (최소 1일 ~ 최대 14일)
+                    </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-shield-alt mr-2 text-red-600"></i>위험도 평가
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">기술적 위험</span>
+                                <span class="font-bold text-yellow-600">중간 (5/10)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 50%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">딥러닝 모델 안정성 검증 필요</div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">안전 위험 (ASIL-B)</span>
+                                <span class="font-bold text-green-600">낮음 (2/10)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 20%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">편의 기능, 주행 안전 무관</div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-600">사용자 영향</span>
+                                <span class="font-bold text-blue-600">높음 (8/10)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">일상적 사용 빈도 매우 높음</div>
+                        </div>
+
+                        <div class="bg-green-50 border border-green-300 rounded p-3 text-sm">
+                            <div class="font-bold text-green-900 mb-1">
+                                <i class="fas fa-check-circle mr-1"></i>종합 평가: 배포 가능
+                            </div>
+                            <div class="text-gray-700">
+                                단계별 Canary 배포 전략 적용으로 위험 최소화됨. 
+                                자동 롤백 조건 충족 시 즉시 중단 가능.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample VINs -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-list-ul mr-2 text-gray-600"></i>Stage 1 대상 차량 (샘플)
+                    </h3>
+                    <div class="space-y-2 text-sm max-h-64 overflow-y-auto">
+                        <div class="bg-gray-50 rounded p-2">
+                            <div class="font-mono text-xs text-blue-600">KMHXX00BXPU123456</div>
+                            <div class="text-xs text-gray-500">GN7 | 서울 | SW v5.3.1 | HPC 8GB</div>
+                        </div>
+                        <div class="bg-gray-50 rounded p-2">
+                            <div class="font-mono text-xs text-blue-600">KMHXX00BXPU234567</div>
+                            <div class="text-xs text-gray-500">G90 | 경기 | SW v5.4.0 | HPC 8GB</div>
+                        </div>
+                        <div class="bg-gray-50 rounded p-2">
+                            <div class="font-mono text-xs text-blue-600">KMHXX00BXPU345678</div>
+                            <div class="text-xs text-gray-500">GN7 | 인천 | SW v5.3.2 | HPC 6GB</div>
+                        </div>
+                        <div class="bg-gray-50 rounded p-2">
+                            <div class="font-mono text-xs text-blue-600">KMHXX00BXPU456789</div>
+                            <div class="text-xs text-gray-500">G90 | 서울 | SW v5.5.0 | HPC 12GB</div>
+                        </div>
+                        <div class="text-center py-2 text-gray-500">
+                            ... 외 1,086대
+                        </div>
+                    </div>
+                    <button class="w-full mt-3 bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200 text-sm">
+                        <i class="fas fa-download mr-2"></i>전체 목록 CSV 다운로드
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive range sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const numberInput = slider.parentElement.querySelector('input[type="number"]');
+            slider.addEventListener('input', (e) => {
+                numberInput.value = e.target.value;
+            });
+            numberInput.addEventListener('input', (e) => {
+                slider.value = e.target.value;
+            });
+        });
+    </script>
+</body>
+</html>

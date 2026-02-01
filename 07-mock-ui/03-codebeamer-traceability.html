@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - CodeBeamer Traceability</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .flow-line {
+            border-left: 3px solid #00aad2;
+            margin-left: 20px;
+            padding-left: 20px;
+        }
+        .trace-node {
+            position: relative;
+        }
+        .trace-node::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 50%;
+            width: 12px;
+            height: 12px;
+            background: #00aad2;
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-[#002c5f] text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <i class="fas fa-link text-2xl"></i>
+                <h1 class="text-2xl font-bold">FleetFlag - CodeBeamer Traceability Matrix</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm">연동: <span class="text-green-400">●</span> CodeBeamer ALM</span>
+                <button class="bg-[#00aad2] px-4 py-2 rounded hover:bg-[#0099bb]">
+                    <i class="fas fa-sync-alt mr-2"></i>요구사항 동기화
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">총 요구사항</p>
+                        <p class="text-3xl font-bold text-gray-800">127</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">매핑된 Flag</p>
+                        <p class="text-3xl font-bold text-green-600">124</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-link text-green-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">추적성 100%</p>
+                        <p class="text-3xl font-bold text-purple-600">97.6%</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-check-double text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">미매핑</p>
+                        <p class="text-3xl font-bold text-red-600">3</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traceability Table -->
+        <div class="bg-white rounded-lg shadow mb-8">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-800">
+                    <i class="fas fa-table mr-2"></i>
+                    요구사항 ↔ Feature Flag 매핑
+                </h2>
+                <div class="flex space-x-2">
+                    <input type="text" placeholder="검색..." class="px-3 py-1 border rounded text-sm">
+                    <button class="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200">
+                        <i class="fas fa-filter mr-1"></i>필터
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">요구사항 ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">요구사항 이름</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">ASIL 등급</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Feature Flag</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">상태</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">담당자</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">REQ-1234</a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium">ADAS Lane Keep Assist v2</div>
+                                <div class="text-xs text-gray-500">차선 유지 보조 알고리즘 개선</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-800">ASIL-D</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-link text-green-500"></i>
+                                    <code class="text-sm bg-gray-100 px-2 py-1 rounded">adas_lka_v2</code>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Active (75%)</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">김철수</div>
+                                <div class="text-xs text-gray-500">ADAS팀</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">REQ-1235</a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium">Battery Fast Charging Optimization</div>
+                                <div class="text-xs text-gray-500">고속 충전 최적화 알고리즘</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Non-Crit</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-link text-green-500"></i>
+                                    <code class="text-sm bg-gray-100 px-2 py-1 rounded">battery_fast_charge</code>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">Testing (25%)</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">이영희</div>
+                                <div class="text-xs text-gray-500">Battery팀</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-blue-600 hover:text-blue-800">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr class="hover:bg-gray-50 bg-red-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">REQ-1236</a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium">New Infotainment UI Theme</div>
+                                <div class="text-xs text-gray-500">새로운 인포테인먼트 UI 테마</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Non-Crit</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-unlink text-red-500"></i>
+                                    <span class="text-sm text-red-600">미매핑</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800">Draft</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm">박민수</div>
+                                <div class="text-xs text-gray-500">UX팀</div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-green-600 hover:text-green-800">
+                                    <i class="fas fa-plus-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detailed Traceability View -->
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Left: Traceability Flow -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-project-diagram mr-2"></i>
+                        추적성 흐름 (REQ-1234)
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <div class="flow-line space-y-6">
+                        <!-- Level 1: Requirement -->
+                        <div class="trace-node">
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">요구사항</span>
+                                    <span class="text-xs text-gray-500">CodeBeamer</span>
+                                </div>
+                                <div class="font-bold">REQ-1234</div>
+                                <div class="text-sm">ADAS Lane Keep Assist v2</div>
+                                <div class="text-xs text-gray-600 mt-2">
+                                    <i class="fas fa-user mr-1"></i>담당: 김철수 (ADAS팀)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Level 2: Design -->
+                        <div class="trace-node">
+                            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">설계</span>
+                                    <span class="text-xs text-gray-500">CodeBeamer</span>
+                                </div>
+                                <div class="font-bold">DESIGN-5678</div>
+                                <div class="text-sm">LKA Algorithm Specification</div>
+                            </div>
+                        </div>
+
+                        <!-- Level 3: Feature Flag -->
+                        <div class="trace-node">
+                            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">Feature Flag</span>
+                                    <span class="text-xs text-gray-500">FleetFlag</span>
+                                </div>
+                                <div class="font-bold font-mono">adas_lka_v2</div>
+                                <div class="text-sm">Status: Active (75% Rollout)</div>
+                                <div class="text-xs text-gray-600 mt-2">
+                                    <i class="fas fa-shield-alt mr-1 text-red-500"></i>ASIL-D
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Level 4: Implementation -->
+                        <div class="trace-node">
+                            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800">구현</span>
+                                    <span class="text-xs text-gray-500">Git Repository</span>
+                                </div>
+                                <div class="font-bold font-mono">feature/adas-lka-v2</div>
+                                <div class="text-sm">Commit: a1b2c3d</div>
+                            </div>
+                        </div>
+
+                        <!-- Level 5: Test -->
+                        <div class="trace-node">
+                            <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-orange-100 text-orange-800">테스트</span>
+                                    <span class="text-xs text-gray-500">CodeBeamer</span>
+                                </div>
+                                <div class="font-bold">TEST-9012</div>
+                                <div class="text-sm">HIL Test: Passed (98.5%)</div>
+                            </div>
+                        </div>
+
+                        <!-- Level 6: Deployment -->
+                        <div class="trace-node">
+                            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="px-2 py-1 text-xs rounded bg-indigo-100 text-indigo-800">배포</span>
+                                    <span class="text-xs text-gray-500">SUMS</span>
+                                </div>
+                                <div class="font-bold">OTA-2026-02-01</div>
+                                <div class="text-sm">7,500대 차량 적용</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Change History & Audit -->
+            <div class="space-y-6">
+                <!-- Sync History -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-history mr-2"></i>
+                            동기화 이력
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+                        <div class="bg-gray-50 rounded p-3 text-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold">REQ-1234 → adas_lka_v2</span>
+                                <span class="text-xs text-gray-500">2시간 전</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-sync text-green-500 mr-1"></i>
+                                Status 업데이트: Testing → Active
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-user mr-1"></i>김철수
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded p-3 text-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold">REQ-1235 → battery_fast_charge</span>
+                                <span class="text-xs text-gray-500">1일 전</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-sync text-blue-500 mr-1"></i>
+                                새 요구사항 매핑 생성
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-user mr-1"></i>이영희
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded p-3 text-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold">REQ-1234 → adas_lka_v2</span>
+                                <span class="text-xs text-gray-500">3일 전</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-sync text-orange-500 mr-1"></i>
+                                ASIL 등급 변경: ASIL-B → ASIL-D
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <i class="fas fa-user mr-1"></i>Safety 팀
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Approval Workflow -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-tasks mr-2"></i>
+                            승인 Workflow (ASIL-D)
+                        </h3>
+                    </div>
+                    <div class="p-4">
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <div class="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="ml-4 flex-1">
+                                    <div class="font-bold">1단계: 개발팀 검토</div>
+                                    <div class="text-xs text-gray-500">승인: 김철수 (2026-01-20)</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <div class="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="ml-4 flex-1">
+                                    <div class="font-bold">2단계: Safety 팀 승인</div>
+                                    <div class="text-xs text-gray-500">승인: 최수진 (2026-01-22)</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <div class="bg-blue-500 rounded-full w-8 h-8 flex items-center justify-center text-white">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <div class="ml-4 flex-1">
+                                    <div class="font-bold">3단계: Production 배포</div>
+                                    <div class="text-xs text-yellow-600">대기 중 (75% → 100%)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coverage Matrix -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-chart-pie mr-2"></i>
+                            추적성 커버리지
+                        </h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-600">요구사항 → Flag</span>
+                                    <span class="font-bold text-green-600">97.6%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 97.6%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-600">설계 → Flag</span>
+                                    <span class="font-bold text-green-600">100%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm text-gray-600">테스트 → Flag</span>
+                                    <span class="font-bold text-yellow-600">85.3%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 85.3%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

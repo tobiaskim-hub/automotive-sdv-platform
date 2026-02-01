@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - Safety Gatekeeper Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .critical-alert {
+            animation: pulse-red 2s infinite;
+        }
+        .gauge {
+            width: 150px;
+            height: 150px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Header -->
+    <header class="bg-black shadow-lg border-b-2 border-red-600">
+        <div class="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <i class="fas fa-shield-alt text-3xl text-red-500"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">Safety Gatekeeper Dashboard</h1>
+                    <p class="text-sm text-gray-400">실시간 차량 안전 모니터링 및 강제 차단 시스템</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <div class="text-xs text-gray-400">시스템 상태</div>
+                    <div class="text-green-400 font-bold">● OPERATIONAL</div>
+                </div>
+                <button class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 critical-alert">
+                    <i class="fas fa-power-off mr-2"></i>EMERGENCY STOP
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Critical Alerts -->
+        <div class="bg-red-900 border-2 border-red-600 rounded-lg p-6 mb-8 critical-alert">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-exclamation-triangle text-5xl text-red-400"></i>
+                    <div>
+                        <h2 class="text-2xl font-bold text-red-200">⚠️ CRITICAL: Safety Override Active</h2>
+                        <p class="text-red-300">2대 차량에서 안전 조건 미충족으로 Feature Flag가 강제 차단되었습니다</p>
+                    </div>
+                </div>
+                <button class="bg-red-600 px-6 py-3 rounded hover:bg-red-700 text-white font-bold">
+                    <i class="fas fa-clipboard-list mr-2"></i>상세 보기
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-5 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">모니터링 차량</p>
+                        <p class="text-3xl font-bold text-green-400">10,234</p>
+                    </div>
+                    <div class="bg-green-900 p-3 rounded-full">
+                        <i class="fas fa-car text-green-400 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">안전 검증 통과</p>
+                        <p class="text-3xl font-bold text-blue-400">10,232</p>
+                    </div>
+                    <div class="bg-blue-900 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-blue-400 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">강제 차단</p>
+                        <p class="text-3xl font-bold text-red-400">2</p>
+                    </div>
+                    <div class="bg-red-900 p-3 rounded-full">
+                        <i class="fas fa-ban text-red-400 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">경고 상태</p>
+                        <p class="text-3xl font-bold text-yellow-400">15</p>
+                    </div>
+                    <div class="bg-yellow-900 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">초당 검증 횟수</p>
+                        <p class="text-3xl font-bold text-purple-400">8,543</p>
+                    </div>
+                    <div class="bg-purple-900 p-3 rounded-full">
+                        <i class="fas fa-tachometer-alt text-purple-400 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+            <!-- Left: Safety Rules -->
+            <div class="col-span-2 bg-gray-800 rounded-lg shadow-lg">
+                <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                    <h2 class="text-xl font-bold">
+                        <i class="fas fa-gavel mr-2 text-yellow-400"></i>
+                        Safety Gatekeeper 규칙 (ASIL-D)
+                    </h2>
+                    <span class="text-sm text-gray-400">총 8개 규칙 활성화</span>
+                </div>
+                <div class="p-6 space-y-4">
+                    <!-- Rule 1 -->
+                    <div class="bg-gray-900 rounded-lg p-4 border-l-4 border-red-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs rounded bg-red-900 text-red-300">ASIL-D</span>
+                                <span class="font-bold">Rule #1: 배터리 전압 체크</span>
+                            </div>
+                            <span class="text-green-400"><i class="fas fa-check-circle"></i> Active</span>
+                        </div>
+                        <div class="text-sm text-gray-400 mb-2">
+                            <strong>Flag:</strong> battery_fast_charge
+                        </div>
+                        <div class="text-sm text-gray-300">
+                            <strong>조건:</strong> <code class="bg-gray-800 px-2 py-1 rounded">battery_voltage >= 400V && battery_temp < 45°C</code>
+                        </div>
+                        <div class="text-sm text-gray-300 mt-2">
+                            <strong>차단 동작:</strong> 전압 부족 또는 온도 초과 시 즉시 고속 충전 비활성화
+                        </div>
+                        <div class="mt-3 flex items-center space-x-4 text-xs">
+                            <span class="text-green-400"><i class="fas fa-check mr-1"></i>통과: 10,232대</span>
+                            <span class="text-red-400"><i class="fas fa-times mr-1"></i>차단: 2대</span>
+                        </div>
+                    </div>
+
+                    <!-- Rule 2 -->
+                    <div class="bg-gray-900 rounded-lg p-4 border-l-4 border-red-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs rounded bg-red-900 text-red-300">ASIL-D</span>
+                                <span class="font-bold">Rule #2: 주행 속도 제한</span>
+                            </div>
+                            <span class="text-green-400"><i class="fas fa-check-circle"></i> Active</span>
+                        </div>
+                        <div class="text-sm text-gray-400 mb-2">
+                            <strong>Flag:</strong> adas_lka_v2
+                        </div>
+                        <div class="text-sm text-gray-300">
+                            <strong>조건:</strong> <code class="bg-gray-800 px-2 py-1 rounded">vehicle_speed <= 180 km/h</code>
+                        </div>
+                        <div class="text-sm text-gray-300 mt-2">
+                            <strong>차단 동작:</strong> 180km/h 초과 시 LKA 자동 비활성화 (고속 안전)
+                        </div>
+                        <div class="mt-3 flex items-center space-x-4 text-xs">
+                            <span class="text-green-400"><i class="fas fa-check mr-1"></i>통과: 10,234대</span>
+                            <span class="text-gray-400"><i class="fas fa-times mr-1"></i>차단: 0대</span>
+                        </div>
+                    </div>
+
+                    <!-- Rule 3 -->
+                    <div class="bg-gray-900 rounded-lg p-4 border-l-4 border-orange-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs rounded bg-orange-900 text-orange-300">Safe-Rel</span>
+                                <span class="font-bold">Rule #3: 센서 상태 (DTC) 체크</span>
+                            </div>
+                            <span class="text-green-400"><i class="fas fa-check-circle"></i> Active</span>
+                        </div>
+                        <div class="text-sm text-gray-400 mb-2">
+                            <strong>Flag:</strong> avp_parking
+                        </div>
+                        <div class="text-sm text-gray-300">
+                            <strong>조건:</strong> <code class="bg-gray-800 px-2 py-1 rounded">camera_status == OK && radar_status == OK && dtc_count == 0</code>
+                        </div>
+                        <div class="text-sm text-gray-300 mt-2">
+                            <strong>차단 동작:</strong> 카메라/레이더 고장 또는 DTC 발생 시 자동 주차 비활성화
+                        </div>
+                        <div class="mt-3 flex items-center space-x-4 text-xs">
+                            <span class="text-green-400"><i class="fas fa-check mr-1"></i>통과: 10,219대</span>
+                            <span class="text-yellow-400"><i class="fas fa-exclamation mr-1"></i>경고: 15대</span>
+                        </div>
+                    </div>
+
+                    <!-- Rule 4 -->
+                    <div class="bg-gray-900 rounded-lg p-4 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300">Non-Crit</span>
+                                <span class="font-bold">Rule #4: 네트워크 연결 상태</span>
+                            </div>
+                            <span class="text-green-400"><i class="fas fa-check-circle"></i> Active</span>
+                        </div>
+                        <div class="text-sm text-gray-400 mb-2">
+                            <strong>Flag:</strong> ota_update_auto
+                        </div>
+                        <div class="text-sm text-gray-300">
+                            <strong>조건:</strong> <code class="bg-gray-800 px-2 py-1 rounded">network_status == CONNECTED && battery_soc > 50%</code>
+                        </div>
+                        <div class="text-sm text-gray-300 mt-2">
+                            <strong>차단 동작:</strong> 네트워크 끊김 또는 배터리 부족 시 자동 업데이트 연기
+                        </div>
+                        <div class="mt-3 flex items-center space-x-4 text-xs">
+                            <span class="text-green-400"><i class="fas fa-check mr-1"></i>통과: 8,521대</span>
+                            <span class="text-gray-400"><i class="fas fa-pause mr-1"></i>대기: 1,713대</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Real-time Monitoring -->
+            <div class="space-y-6">
+                <!-- Critical Vehicles -->
+                <div class="bg-gray-800 rounded-lg shadow-lg">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h3 class="text-lg font-bold text-red-400">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            긴급 대응 필요 차량
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <div class="bg-red-900 bg-opacity-30 border border-red-600 rounded p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-red-300">VIN: KMH1234***</span>
+                                <span class="text-xs bg-red-600 px-2 py-1 rounded">BLOCKED</span>
+                            </div>
+                            <div class="text-xs text-gray-300">
+                                <div>Flag: battery_fast_charge</div>
+                                <div class="text-red-300 mt-1">
+                                    <i class="fas fa-bolt mr-1"></i>
+                                    Battery Voltage: <strong>380V</strong> (< 400V 최소)
+                                </div>
+                                <div class="text-red-300">
+                                    <i class="fas fa-thermometer-half mr-1"></i>
+                                    Battery Temp: <strong>48°C</strong> (> 45°C 최대)
+                                </div>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-400">
+                                마지막 업데이트: 2초 전
+                            </div>
+                        </div>
+
+                        <div class="bg-red-900 bg-opacity-30 border border-red-600 rounded p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-red-300">VIN: KMH5678***</span>
+                                <span class="text-xs bg-red-600 px-2 py-1 rounded">BLOCKED</span>
+                            </div>
+                            <div class="text-xs text-gray-300">
+                                <div>Flag: battery_fast_charge</div>
+                                <div class="text-red-300 mt-1">
+                                    <i class="fas fa-thermometer-full mr-1"></i>
+                                    Battery Temp: <strong>52°C</strong> (> 45°C 최대)
+                                </div>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-400">
+                                마지막 업데이트: 5초 전
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning Vehicles -->
+                <div class="bg-gray-800 rounded-lg shadow-lg">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h3 class="text-lg font-bold text-yellow-400">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            경고 상태 차량
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-2 max-h-64 overflow-y-auto">
+                        <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded p-2 text-xs">
+                            <div class="font-bold text-yellow-300">VIN: KMH9012***</div>
+                            <div class="text-gray-300">Flag: avp_parking</div>
+                            <div class="text-yellow-300">⚠️ Camera DTC: Warning</div>
+                        </div>
+                        <div class="bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded p-2 text-xs">
+                            <div class="font-bold text-yellow-300">VIN: KMH3456***</div>
+                            <div class="text-gray-300">Flag: adas_lka_v2</div>
+                            <div class="text-yellow-300">⚠️ Radar Signal Weak</div>
+                        </div>
+                        <div class="text-center text-gray-500 text-xs mt-2">
+                            ... 13개 더 보기
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="bg-gray-800 rounded-lg shadow-lg">
+                    <div class="px-6 py-4 border-b border-gray-700">
+                        <h3 class="text-lg font-bold">
+                            <i class="fas fa-heartbeat mr-2 text-green-400"></i>
+                            시스템 Health
+                        </h3>
+                    </div>
+                    <div class="p-6 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-400">SDK Latency (P95)</span>
+                            <span class="font-bold text-green-400">0.08 ms</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-400">검증 성공률</span>
+                            <span class="font-bold text-green-400">99.98%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-400">메모리 사용량</span>
+                            <span class="font-bold text-blue-400">58 MB / 64 MB</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-400">CPU 사용률</span>
+                            <span class="font-bold text-blue-400">1.8%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Override Log -->
+        <div class="bg-gray-800 rounded-lg shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                <h2 class="text-xl font-bold">
+                    <i class="fas fa-history mr-2 text-blue-400"></i>
+                    Safety Override 로그 (최근 24시간)
+                </h2>
+                <button class="px-3 py-1 text-sm bg-gray-700 rounded hover:bg-gray-600">
+                    <i class="fas fa-download mr-1"></i>로그 다운로드
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">시각</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">VIN</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">Flag</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">규칙</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">사유</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase">동작</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <tr class="hover:bg-gray-900">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2026-02-01 14:23:15</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">KMH1234***</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">battery_fast_charge</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">Rule #1</td>
+                            <td class="px-6 py-4 text-sm text-red-400">Battery Voltage < 400V (380V)</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded bg-red-600">BLOCKED</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-900">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2026-02-01 14:18:42</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">KMH5678***</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">battery_fast_charge</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">Rule #1</td>
+                            <td class="px-6 py-4 text-sm text-red-400">Battery Temp > 45°C (52°C)</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded bg-red-600">BLOCKED</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-900">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2026-02-01 13:45:23</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">KMH9012***</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">avp_parking</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">Rule #3</td>
+                            <td class="px-6 py-4 text-sm text-yellow-400">Camera DTC Warning</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded bg-yellow-600">WARNING</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-900">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2026-02-01 12:12:08</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">KMH1234***</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">battery_fast_charge</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">Rule #1</td>
+                            <td class="px-6 py-4 text-sm text-green-400">Conditions restored (390V → 410V)</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded bg-green-600">RESTORED</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real-time update simulation
+        setInterval(() => {
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            document.querySelectorAll('.text-gray-400').forEach(el => {
+                if (el.textContent.includes('마지막 업데이트')) {
+                    const seconds = Math.floor(Math.random() * 10);
+                    el.textContent = `마지막 업데이트: ${seconds}초 전`;
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

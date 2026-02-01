@@ -58,6 +58,15 @@
 - **[디자인 시스템](06-ui-ux/design-system.md)** - 현대차 브랜드 컬러
 - **[사용자 플로우](06-ui-ux/user-flows.md)** - 주요 기능 플로우
 
+### 7️⃣ Mock-UI (Interactive Prototypes)
+- **[Mock-UI 모음](07-mock-ui/README.md)** - HTML/CSS/JS 인터랙티브 프로토타입
+- **[BOM 의존성 매트릭스](07-mock-ui/01-bom-dependency-matrix.html)** - 하드웨어 의존성 관리
+- **[Safety Gatekeeper](07-mock-ui/02-safety-gatekeeper-dashboard.html)** - 실시간 안전 모니터링
+- **[CodeBeamer 추적성](07-mock-ui/03-codebeamer-traceability.html)** - 요구사항 추적성
+- **[Kill Switch 제어](07-mock-ui/04-kill-switch-control-center.html)** - 긴급 차단 시스템
+- **[Rollout 전략](07-mock-ui/05-rollout-strategy-editor.html)** - 단계별 배포 설계
+- **[Analytics 대시보드](07-mock-ui/06-analytics-monitoring-dashboard.html)** - 성능 분석
+
 ---
 
 ## 🏗️ 기술 스택
