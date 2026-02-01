@@ -255,10 +255,19 @@
                 <h2 class="text-xl font-semibold">
                     <i class="fas fa-project-diagram mr-2"></i>
                     9-Step CI/CD Pipeline
+                    <span class="ml-3 text-sm" id="simulation-status">
+                        <i class="fas fa-circle text-green-400 animate-pulse"></i>
+                        <span class="text-gray-400">실시간 시뮬레이션 진행 중</span>
+                    </span>
                 </h2>
-                <div class="text-sm text-gray-400">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    각 단계를 클릭하여 상세 정보 확인
+                <div class="flex items-center gap-4">
+                    <button class="control-btn" id="btn-simulation" onclick="toggleSimulation()">
+                        <i class="fas fa-pause"></i> 시뮬레이션 정지
+                    </button>
+                    <div class="text-sm text-gray-400">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        각 단계를 클릭하여 상세 정보 확인
+                    </div>
                 </div>
             </div>
 
@@ -316,6 +325,23 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity Log -->
+        <div class="glass-card mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">
+                    <i class="fas fa-stream mr-2 text-blue-400"></i>
+                    실시간 파이프라인 활동 로그
+                </h3>
+                <div class="text-xs text-gray-400">
+                    <i class="fas fa-sync-alt mr-1"></i>
+                    자동 업데이트 (5초마다)
+                </div>
+            </div>
+            <div class="bg-black bg-opacity-40 rounded-lg p-4 font-mono text-sm" style="height: 300px; overflow-y: auto;" id="activity-log">
+                <!-- Real-time logs will be inserted here -->
             </div>
         </div>
     </div>
@@ -712,7 +738,179 @@
             });
 
             svg.appendChild(g);
+
+            // Store node elements for simulation
+            stage.element = g;
+            stage.circle = circle;
         });
+
+        // Real-time Simulation
+        let simulationRunning = true;
+        let simulationInterval;
+        const activityLog = document.getElementById('activity-log');
+
+        const logMessages = [
+            { step: 1, icon: '✓', color: '#10b981', message: '[Developer] 코드 커밋: feat/ADAS-Level3-improvements' },
+            { step: 1, icon: '↑', color: '#3b82f6', message: '[Developer] GitHub에 푸시 완료' },
+            { step: 2, icon: '⚡', color: '#f59e0b', message: '[GitHub] Webhook 트리거 발생' },
+            { step: 2, icon: '📊', color: '#64748b', message: '[SonarQube] 정적 분석 시작...' },
+            { step: 2, icon: '✓', color: '#10b981', message: '[SonarQube] 코드 품질: A등급 (89% 커버리지)' },
+            { step: 3, icon: '▶', color: '#f59e0b', message: '[Jenkins] 빌드 #4523 트리거됨' },
+            { step: 4, icon: '⚙', color: '#10b981', message: '[Jenkins] 빌드 시작: Maven clean install' },
+            { step: 4, icon: '⚙', color: '#10b981', message: '[Jenkins] 컴파일 완료 (327 files)' },
+            { step: 5, icon: '🧪', color: '#8b5cf6', message: '[JUnit] 단위 테스트 실행 중... (1,247 tests)' },
+            { step: 5, icon: '✓', color: '#10b981', message: '[JUnit] 테스트 통과: 1,198/1,247 (96.1%)' },
+            { step: 5, icon: '🧪', color: '#8b5cf6', message: '[Selenium] E2E 테스트 시작...' },
+            { step: 5, icon: '✓', color: '#10b981', message: '[Selenium] E2E 테스트 통과: 89/92 (96.7%)' },
+            { step: 6, icon: '📦', color: '#059669', message: '[JFrog] 아티팩트 업로드 중...' },
+            { step: 6, icon: '✓', color: '#10b981', message: '[JFrog] 저장 완료: fleetflag-v2.5.3-SNAPSHOT.jar (42.3MB)' },
+            { step: 7, icon: '🔥', color: '#f59e0b', message: '[Spinnaker] Bake 트리거 활성화' },
+            { step: 8, icon: '🐳', color: '#0ea5e9', message: '[Docker] 컨테이너 이미지 빌드 시작...' },
+            { step: 8, icon: '🐳', color: '#0ea5e9', message: '[Docker] 이미지 생성: fleetflag:v2.5.3-4523' },
+            { step: 8, icon: '✓', color: '#10b981', message: '[Docker] 이미지 푸시 완료 (Docker Hub)' },
+            { step: 9, icon: '🚀', color: '#3b82f6', message: '[Spinnaker] Staging 배포 시작...' },
+            { step: 9, icon: '✓', color: '#10b981', message: '[K8s Staging] 배포 완료 (3 pods healthy)' },
+            { step: 9, icon: '🧪', color: '#8b5cf6', message: '[Staging] 스모크 테스트 실행 중...' },
+            { step: 9, icon: '✓', color: '#10b981', message: '[Staging] 스모크 테스트 통과' },
+            { step: 9, icon: '🚀', color: '#3b82f6', message: '[Spinnaker] Production 배포 승인 대기...' },
+            { step: 9, icon: '✓', color: '#10b981', message: '[Approval] 자동 승인됨 (테스트 통과)' },
+            { step: 9, icon: '🚀', color: '#6366f1', message: '[K8s Production] Rolling Update 시작...' },
+            { step: 9, icon: '✓', color: '#10b981', message: '[K8s Production] 배포 완료 (12 pods, 125k vehicles)' },
+            { step: 9, icon: '📊', color: '#10b981', message: '[Monitoring] 성능 지표 정상 (P95: 38ms)' }
+        ];
+
+        let currentLogIndex = 0;
+        let currentStepIndex = 0;
+
+        function addLogMessage(msg) {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString('ko-KR');
+            
+            const logLine = document.createElement('div');
+            logLine.style.marginBottom = '4px';
+            logLine.style.animation = 'fadeIn 0.3s ease-in';
+            logLine.innerHTML = `
+                <span style="color: #64748b;">[${timestamp}]</span>
+                <span style="color: ${msg.color}; font-weight: bold;">${msg.icon}</span>
+                <span style="color: #e2e8f0;">${msg.message}</span>
+            `;
+            
+            activityLog.appendChild(logLine);
+            activityLog.scrollTop = activityLog.scrollHeight;
+
+            // Highlight corresponding stage
+            if (msg.step && msg.step <= pipelineStages.length) {
+                const stage = pipelineStages.find(s => s.id === msg.step);
+                if (stage && stage.circle) {
+                    // Pulse effect
+                    stage.circle.style.animation = 'pulse 0.5s ease-in-out';
+                    setTimeout(() => {
+                        stage.circle.style.animation = '';
+                    }, 500);
+                }
+            }
+
+            // Keep only last 50 logs
+            if (activityLog.children.length > 50) {
+                activityLog.removeChild(activityLog.firstChild);
+            }
+        }
+
+        function simulateActivity() {
+            if (!simulationRunning) return;
+
+            // Add next log message
+            if (currentLogIndex < logMessages.length) {
+                addLogMessage(logMessages[currentLogIndex]);
+                currentLogIndex++;
+            } else {
+                // Loop back
+                currentLogIndex = 0;
+                
+                // Add separator
+                const separator = document.createElement('div');
+                separator.style.borderTop = '1px dashed #64748b';
+                separator.style.margin = '8px 0';
+                activityLog.appendChild(separator);
+            }
+        }
+
+        function toggleSimulation() {
+            simulationRunning = !simulationRunning;
+            const btn = document.getElementById('btn-simulation');
+            const status = document.getElementById('simulation-status');
+            
+            if (simulationRunning) {
+                btn.innerHTML = '<i class="fas fa-pause"></i> 시뮬레이션 정지';
+                status.innerHTML = '<i class="fas fa-circle text-green-400 animate-pulse"></i><span class="text-gray-400">실시간 시뮬레이션 진행 중</span>';
+                startSimulation();
+            } else {
+                btn.innerHTML = '<i class="fas fa-play"></i> 시뮬레이션 시작';
+                status.innerHTML = '<i class="fas fa-circle text-gray-400"></i><span class="text-gray-400">시뮬레이션 정지됨</span>';
+                if (simulationInterval) {
+                    clearInterval(simulationInterval);
+                }
+            }
+        }
+
+        function startSimulation() {
+            simulationInterval = setInterval(simulateActivity, 2000); // Every 2 seconds
+        }
+
+        // Auto-update KPI values
+        function updateKPIValues() {
+            const dailyBuilds = document.querySelector('.kpi-value.text-blue-400');
+            const buildTime = document.querySelector('.kpi-value.text-green-400');
+            const testRate = document.querySelector('.kpi-value.text-purple-400');
+            const weeklyDeploys = document.querySelector('.kpi-value.text-yellow-400');
+            const deployRate = document.querySelector('.kpi-value.text-indigo-400');
+
+            // Simulate slight variations
+            if (dailyBuilds) {
+                const current = parseInt(dailyBuilds.textContent);
+                dailyBuilds.textContent = current + (Math.random() > 0.5 ? 1 : 0);
+            }
+
+            if (testRate) {
+                const rates = ['95%', '96%', '97%', '96%'];
+                testRate.textContent = rates[Math.floor(Math.random() * rates.length)];
+            }
+        }
+
+        // Initialize simulation
+        startSimulation();
+
+        // Update KPIs every 10 seconds
+        setInterval(updateKPIValues, 10000);
+
+        // Add CSS animation for fadeIn
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateX(-10px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            .control-btn {
+                background: rgba(0, 170, 210, 0.2);
+                border: 1px solid rgba(0, 170, 210, 0.5);
+                padding: 10px 18px;
+                border-radius: 10px;
+                color: #00aad2;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .control-btn:hover {
+                background: rgba(0, 170, 210, 0.4);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 170, 210, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
