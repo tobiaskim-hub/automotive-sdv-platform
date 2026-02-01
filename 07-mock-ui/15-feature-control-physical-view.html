@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - E2E Feature Control Physical View</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Stage Card */
+        .stage-card {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stage-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 170, 210, 0.3);
+        }
+
+        .stage-card.completed {
+            border: 2px solid var(--success);
+        }
+
+        .stage-card.active {
+            border: 2px solid var(--secondary);
+            box-shadow: 0 0 20px rgba(0, 170, 210, 0.5);
+        }
+
+        .stage-card.pending {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.6;
+        }
+
+        .stage-card.failed {
+            border: 2px solid var(--danger);
+        }
+
+        /* Stage Arrow */
+        .stage-arrow {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(0, 170, 210, 0.3), rgba(0, 170, 210, 0.8));
+            position: relative;
+            margin: 0 -20px;
+            z-index: 1;
+        }
+
+        .stage-arrow::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid rgba(0, 170, 210, 0.8);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .stage-arrow.animated {
+            background: linear-gradient(90deg, 
+                rgba(0, 170, 210, 0.3) 0%,
+                rgba(0, 170, 210, 1) 50%,
+                rgba(0, 170, 210, 0.3) 100%);
+            background-size: 200% 100%;
+            animation: flow 2s linear infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-danger { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .badge-primary { background: rgba(0, 170, 210, 0.2); color: #00aad2; }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--purple));
+            transition: width 1s ease;
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--secondary);
+            padding: 16px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+
+        /* Info Item */
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Select Dropdown */
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--secondary);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(0, 170, 210, 0.1);
+        }
+
+        option {
+            background: #1e293b;
+            color: white;
+        }
+
+        /* Metric Card */
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(0, 170, 210, 0.1);
+            transform: scale(1.05);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--secondary), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="glass-card mx-8 mt-8 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-layer-group mr-3 text-blue-400"></i>
+                    E2E Feature Control Physical View
+                </h1>
+                <p class="text-gray-400">특정 Feature의 End-to-End 워크플로우 현재 상태 (PLM → SUMS → OTA → Vehicle)</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-400">Current Time</div>
+                <div id="current-time" class="text-xl font-bold text-blue-300"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="mx-8 mb-8 space-y-6">
+        <!-- Feature Selection -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-search mr-2 text-green-400"></i>
+                Feature 선택
+            </h2>
+            <div class="flex items-center gap-4">
+                <select id="feature-select" class="flex-1">
+                    <option value="rspa">RSPA (원격 스마트 주차 보조) - ASIL-B</option>
+                    <option value="hda2">HDA2 (고속도로 주행보조 2) - ASIL-D</option>
+                    <option value="boost">Boost Mode (제로백 단축) - ASIL-A</option>
+                    <option value="matrix">Matrix Headlamp Pattern - QM</option>
+                    <option value="ecall">eCall (긴급 호출) - ASIL-D</option>
+                    <option value="summon">Smart Summon (원격 호출) - ASIL-C</option>
+                    <option value="acc">Adaptive Cruise Control - ASIL-C</option>
+                    <option value="wireless">Wireless Charging - QM</option>
+                </select>
+                <button id="refresh-btn" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    새로고침
+                </button>
+            </div>
+        </div>
+
+        <!-- Feature Info -->
+        <div class="glass-card">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex-1">
+                    <h2 class="text-2xl font-bold text-white mb-2" id="feature-name">RSPA (원격 스마트 주차 보조)</h2>
+                    <p class="text-gray-400 mb-3" id="feature-desc">초음파 센서를 활용한 원격 주차 보조 기능</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <span class="badge badge-warning" id="feature-asil">ASIL-B</span>
+                        <span class="badge badge-primary" id="feature-category">ADAS</span>
+                        <span class="badge badge-success" id="feature-status">Active</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-4xl mb-2" id="feature-icon">🅿️</div>
+                    <div class="text-sm text-gray-400">Feature ID</div>
+                    <div class="text-lg font-bold text-blue-300" id="feature-id">FEAT-001</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Metrics -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-yellow-400"></i>
+                Current Status
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Target Vehicles</div>
+                    <div class="metric-value" id="target-vehicles">87,500</div>
+                    <div class="text-xs text-gray-500 mt-1">/ 125,000 Total</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Active Rate</div>
+                    <div class="metric-value" id="active-rate">70%</div>
+                    <div class="text-xs text-green-400 mt-1">▲ 5% vs Last Week</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Avg P95 Latency</div>
+                    <div class="metric-value" id="latency">38ms</div>
+                    <div class="text-xs text-green-400 mt-1">Target: &lt;50ms</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">DTC Errors</div>
+                    <div class="metric-value" id="dtc-errors">0</div>
+                    <div class="text-xs text-green-400 mt-1">No Issues</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Last Updated</div>
+                    <div class="metric-value text-2xl" id="last-updated">2m</div>
+                    <div class="text-xs text-gray-500 mt-1">ago</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4-Stage Physical View -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-6">
+                <i class="fas fa-sitemap mr-2 text-purple-400"></i>
+                4-Stage E2E Workflow (Physical View)
+            </h2>
+
+            <!-- Stage Flow -->
+            <div class="flex items-center justify-between overflow-x-auto pb-4 mb-6">
+                <!-- Stage 1: PLM -->
+                <div class="stage-card glass-card min-w-[200px] completed" data-stage="plm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-3xl">📋</div>
+                        <span class="badge badge-success">
+                            <i class="fas fa-check mr-1"></i>Completed
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">1. PLM</h3>
+                    <p class="text-sm text-gray-400 mb-3">Feature 정의 및 BOM 매핑</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">System:</span>
+                            <span class="font-bold text-white">Codebeamer</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Status:</span>
+                            <span class="font-bold text-green-400">Mapped</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stage-arrow animated"></div>
+
+                <!-- Stage 2: SUMS -->
+                <div class="stage-card glass-card min-w-[200px] completed" data-stage="sums">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-3xl">📦</div>
+                        <span class="badge badge-success">
+                            <i class="fas fa-check mr-1"></i>Frozen
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">2. SUMS</h3>
+                    <p class="text-sm text-gray-400 mb-3">SW 패키지 확정</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Package:</span>
+                            <span class="font-bold text-white">v2.5.3</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Status:</span>
+                            <span class="font-bold text-green-400">Frozen</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stage-arrow animated"></div>
+
+                <!-- Stage 3: OTA -->
+                <div class="stage-card glass-card min-w-[200px] active" data-stage="ota">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-3xl">🌐</div>
+                        <span class="badge badge-primary pulse">
+                            <i class="fas fa-circle mr-1"></i>Deploying
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">3. OTA</h3>
+                    <p class="text-sm text-gray-400 mb-3">정책 배포 및 타겟팅</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Deployed:</span>
+                            <span class="font-bold text-blue-400">87,500대</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Progress:</span>
+                            <span class="font-bold text-yellow-400">70%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stage-arrow animated"></div>
+
+                <!-- Stage 4: Vehicle -->
+                <div class="stage-card glass-card min-w-[200px] active" data-stage="vehicle">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-3xl">🚗</div>
+                        <span class="badge badge-primary pulse">
+                            <i class="fas fa-circle mr-1"></i>Active
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">4. Vehicle</h3>
+                    <p class="text-sm text-gray-400 mb-3">동적 활성화 및 검증</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-green-400">61,250대</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Rate:</span>
+                            <span class="font-bold text-green-400">70%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Details -->
+            <div id="stage-details" class="space-y-4">
+                <!-- Details will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Stage 1: PLM Details -->
+        <div class="glass-card" id="plm-details">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-database mr-2 text-blue-400"></i>
+                Stage 1: PLM - Feature 정의 및 BOM 매핑
+            </h3>
+            <div class="detail-panel">
+                <h4 class="font-bold text-white mb-3">BOM Dependency Mapping</h4>
+                <div class="space-y-2">
+                    <div class="info-item">
+                        <span class="text-gray-400">Required Hardware:</span>
+                        <span class="font-bold text-white">Ultrasonic_Sensor_Gen3</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">ECU:</span>
+                        <span class="font-bold text-white">ADAS_HPC_v2</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Applicable Models:</span>
+                        <span class="font-bold text-green-400">GV80, Ioniq 5, Ioniq 6</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Regions:</span>
+                        <span class="font-bold text-green-400">Korea, North America, Europe</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">PLM Status:</span>
+                        <span class="badge badge-success">Approved</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 2: SUMS Details -->
+        <div class="glass-card" id="sums-details">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-box mr-2 text-purple-400"></i>
+                Stage 2: SUMS - SW 패키지 확정 (Freeze)
+            </h3>
+            <div class="detail-panel">
+                <h4 class="font-bold text-white mb-3">Package Information</h4>
+                <div class="space-y-2">
+                    <div class="info-item">
+                        <span class="text-gray-400">SW Version:</span>
+                        <span class="font-bold text-white">v2.5.3 (Build #4523)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Package Type:</span>
+                        <span class="font-bold text-white">One-Build (All Variants)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Feature Flag Logic:</span>
+                        <span class="font-mono text-xs text-blue-300">if (Flag.isEnabled("RSPA")) { ... }</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Freeze Date:</span>
+                        <span class="font-bold text-white">2026-01-28 14:32:00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Binary Size:</span>
+                        <span class="font-bold text-white">1.2 GB (Full) / 12 KB (Config Only)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">SUMS Status:</span>
+                        <span class="badge badge-success">Frozen (EO-2026-001)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 3: OTA Details -->
+        <div class="glass-card" id="ota-details">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-satellite-dish mr-2 text-green-400"></i>
+                Stage 3: OTA - 정책 배포 및 타겟팅
+            </h3>
+            <div class="detail-panel">
+                <h4 class="font-bold text-white mb-3">Distribution Policy</h4>
+                <div class="space-y-2">
+                    <div class="info-item">
+                        <span class="text-gray-400">Target Fleet:</span>
+                        <span class="font-bold text-white">GV80 북미형 + Ioniq 5 내수</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Target Count:</span>
+                        <span class="font-bold text-blue-400">87,500대 / 125,000대</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Policy File Size:</span>
+                        <span class="font-bold text-white">8.5 KB (Config Only)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Deployment Method:</span>
+                        <span class="font-bold text-white">Dual Bank (Background)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Rollout Strategy:</span>
+                        <span class="font-bold text-yellow-400">Canary (10% → 50% → 100%)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Current Progress:</span>
+                        <span class="font-bold text-yellow-400">70% (61,250 / 87,500)</span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ota-progress" style="width: 70%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 4: Vehicle Details -->
+        <div class="glass-card" id="vehicle-details">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-car mr-2 text-yellow-400"></i>
+                Stage 4: Vehicle - 동적 활성화 및 안전 검증
+            </h3>
+            <div class="detail-panel">
+                <h4 class="font-bold text-white mb-3">Runtime Evaluation</h4>
+                <div class="space-y-2">
+                    <div class="info-item">
+                        <span class="text-gray-400">Evaluator (SDK):</span>
+                        <span class="font-bold text-white">FleetFlag Agent v1.5.2</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Context Check:</span>
+                        <span class="badge badge-success">✓ BOM Match (센서 확인)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Safety Gatekeeper:</span>
+                        <span class="badge badge-success">✓ Pass (배터리/DTC 정상)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Active Vehicles:</span>
+                        <span class="font-bold text-green-400">61,250대 (70% of Target)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Pending:</span>
+                        <span class="font-bold text-yellow-400">26,250대 (배터리/센서 체크 중)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">Avg Latency (P95):</span>
+                        <span class="font-bold text-green-400">38ms (Target: &lt;50ms)</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="text-gray-400">DTC Errors:</span>
+                        <span class="badge badge-success">0 Issues</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Vehicle Status -->
+        <div class="glass-card">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-chart-bar mr-2 text-cyan-400"></i>
+                Real-time Vehicle Status (Sample)
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left p-3 text-gray-400">Vehicle ID</th>
+                            <th class="text-left p-3 text-gray-400">Model</th>
+                            <th class="text-left p-3 text-gray-400">Region</th>
+                            <th class="text-left p-3 text-gray-400">BOM Check</th>
+                            <th class="text-left p-3 text-gray-400">Safety Gate</th>
+                            <th class="text-left p-3 text-gray-400">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicle-table">
+                        <tr class="border-b border-gray-700/50">
+                            <td class="p-3 font-mono text-xs text-blue-300">VEH-12345</td>
+                            <td class="p-3 text-white">GV80 북미형</td>
+                            <td class="p-3 text-white">North America</td>
+                            <td class="p-3"><span class="badge badge-success">✓ Sensor OK</span></td>
+                            <td class="p-3"><span class="badge badge-success">✓ Pass</span></td>
+                            <td class="p-3"><span class="badge badge-success">Active</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-700/50">
+                            <td class="p-3 font-mono text-xs text-blue-300">VEH-23456</td>
+                            <td class="p-3 text-white">Ioniq 5 내수</td>
+                            <td class="p-3 text-white">Korea</td>
+                            <td class="p-3"><span class="badge badge-success">✓ Sensor OK</span></td>
+                            <td class="p-3"><span class="badge badge-success">✓ Pass</span></td>
+                            <td class="p-3"><span class="badge badge-success">Active</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-700/50">
+                            <td class="p-3 font-mono text-xs text-blue-300">VEH-34567</td>
+                            <td class="p-3 text-white">GV80 내수</td>
+                            <td class="p-3 text-white">Korea</td>
+                            <td class="p-3"><span class="badge badge-success">✓ Sensor OK</span></td>
+                            <td class="p-3"><span class="badge badge-warning">⚠ Battery Low</span></td>
+                            <td class="p-3"><span class="badge badge-warning">Pending</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-700/50">
+                            <td class="p-3 font-mono text-xs text-blue-300">VEH-45678</td>
+                            <td class="p-3 text-white">Ioniq 6 내수</td>
+                            <td class="p-3 text-white">Korea</td>
+                            <td class="p-3"><span class="badge badge-danger">✗ No Sensor</span></td>
+                            <td class="p-3"><span class="badge badge-danger">✗ Fail</span></td>
+                            <td class="p-3"><span class="badge badge-danger">Disabled</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-700/50">
+                            <td class="p-3 font-mono text-xs text-blue-300">VEH-56789</td>
+                            <td class="p-3 text-white">GV80 유럽형</td>
+                            <td class="p-3 text-white">Europe</td>
+                            <td class="p-3"><span class="badge badge-success">✓ Sensor OK</span></td>
+                            <td class="p-3"><span class="badge badge-success">✓ Pass</span></td>
+                            <td class="p-3"><span class="badge badge-success">Active</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-compass mr-2 text-yellow-400"></i>
+                관련 Mock-UI
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="01-devops-pipeline-viewer.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">💻</div>
+                    <div class="text-sm font-bold text-white">DevOps Pipeline</div>
+                </a>
+                <a href="07-end-to-end-simulator.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🎯</div>
+                    <div class="text-sm font-bold text-white">E2E 기능 제어</div>
+                </a>
+                <a href="02-safety-gatekeeper-dashboard.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🛡️</div>
+                    <div class="text-sm font-bold text-white">Safety Gatekeeper</div>
+                </a>
+                <a href="01-bom-dependency-matrix.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">📦</div>
+                    <div class="text-sm font-bold text-white">BOM 의존성</div>
+                </a>
+            </div>
+            <div class="mt-4 text-center">
+                <a href="index.html" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-home mr-2"></i>
+                    전체 Mock-UI 보기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Current Time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('ko-KR');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Feature Data
+        const featureData = {
+            rspa: {
+                name: 'RSPA (원격 스마트 주차 보조)',
+                desc: '초음파 센서를 활용한 원격 주차 보조 기능',
+                icon: '🅿️',
+                id: 'FEAT-001',
+                asil: 'ASIL-B',
+                category: 'ADAS',
+                status: 'Active',
+                targetVehicles: 87500,
+                activeRate: 70,
+                latency: 38,
+                dtcErrors: 0,
+                hardware: 'Ultrasonic_Sensor_Gen3',
+                ecu: 'ADAS_HPC_v2',
+                models: 'GV80, Ioniq 5, Ioniq 6',
+                regions: 'Korea, North America, Europe'
+            },
+            hda2: {
+                name: 'HDA2 (고속도로 주행보조 2)',
+                desc: '전방 레이더와 정밀지도를 활용한 고속도로 주행 보조',
+                icon: '🛣️',
+                id: 'FEAT-002',
+                asil: 'ASIL-D',
+                category: 'ADAS',
+                status: 'Testing',
+                targetVehicles: 125000,
+                activeRate: 30,
+                latency: 48,
+                dtcErrors: 0,
+                hardware: 'Radar_Gen5 + HD_Map',
+                ecu: 'ADAS_HPC_v3',
+                models: 'GV80, GV70, Ioniq 5',
+                regions: 'Korea, North America (독일 제외)'
+            },
+            boost: {
+                name: 'Boost Mode (제로백 단축)',
+                desc: '대용량 모터를 활용한 성능 향상 모드',
+                icon: '⚡',
+                id: 'FEAT-003',
+                asil: 'ASIL-A',
+                category: 'Performance',
+                status: 'Active',
+                targetVehicles: 45000,
+                activeRate: 85,
+                latency: 25,
+                dtcErrors: 0,
+                hardware: 'High_Power_Motor',
+                ecu: 'MCU_v2',
+                models: 'Ioniq 5 N, Ioniq 6 N',
+                regions: 'Global'
+            },
+            matrix: {
+                name: 'Matrix Headlamp Pattern',
+                desc: '매트릭스 헤드램프를 활용한 웰컴 라이트 패턴',
+                icon: '💡',
+                id: 'FEAT-004',
+                asil: 'QM',
+                category: 'Convenience',
+                status: 'Active',
+                targetVehicles: 62500,
+                activeRate: 95,
+                latency: 15,
+                dtcErrors: 0,
+                hardware: 'Matrix_Headlamp',
+                ecu: 'BCM_v3',
+                models: 'GV80, GV70, Genesis G90',
+                regions: 'Global'
+            },
+            ecall: {
+                name: 'eCall (긴급 호출)',
+                desc: '사고 시 자동 긴급 호출 시스템',
+                icon: '🚨',
+                id: 'FEAT-005',
+                asil: 'ASIL-D',
+                category: 'Safety',
+                status: 'Active',
+                targetVehicles: 35000,
+                activeRate: 100,
+                latency: 12,
+                dtcErrors: 0,
+                hardware: 'Telematics_Module',
+                ecu: 'TCU_v2',
+                models: 'All Models',
+                regions: 'Europe, Russia (강제)'
+            },
+            summon: {
+                name: 'Smart Summon (원격 호출)',
+                desc: '원격으로 차량을 호출하는 베타 기능',
+                icon: '📱',
+                id: 'FEAT-006',
+                asil: 'ASIL-C',
+                category: 'Beta',
+                status: 'Testing',
+                targetVehicles: 5000,
+                activeRate: 15,
+                latency: 52,
+                dtcErrors: 3,
+                hardware: 'Camera_360 + Ultrasonic',
+                ecu: 'ADAS_HPC_v3',
+                models: 'Ioniq 5, Ioniq 6',
+                regions: 'Korea (Beta Tester 그룹)'
+            },
+            acc: {
+                name: 'Adaptive Cruise Control',
+                desc: '레이더와 카메라를 활용한 적응형 크루즈 컨트롤',
+                icon: '🎯',
+                id: 'FEAT-007',
+                asil: 'ASIL-C',
+                category: 'ADAS',
+                status: 'Active',
+                targetVehicles: 110000,
+                activeRate: 88,
+                latency: 42,
+                dtcErrors: 0,
+                hardware: 'Radar_Gen4 + Camera',
+                ecu: 'ADAS_HPC_v2',
+                models: 'GV80, GV70, Ioniq 5, Ioniq 6',
+                regions: 'Global'
+            },
+            wireless: {
+                name: 'Wireless Charging',
+                desc: '무선 충전 패드를 활용한 스마트폰 충전',
+                icon: '🔋',
+                id: 'FEAT-008',
+                asil: 'QM',
+                category: 'Convenience',
+                status: 'Active',
+                targetVehicles: 75000,
+                activeRate: 92,
+                latency: 8,
+                dtcErrors: 0,
+                hardware: 'Wireless_Charging_Pad',
+                ecu: 'BCM_v2',
+                models: 'GV80, Ioniq 5, Ioniq 6',
+                regions: 'Global'
+            }
+        };
+
+        // Feature Select
+        const featureSelect = document.getElementById('feature-select');
+        const refreshBtn = document.getElementById('refresh-btn');
+
+        function updateFeatureInfo() {
+            const selectedFeature = featureSelect.value;
+            const data = featureData[selectedFeature];
+
+            // Update Info
+            document.getElementById('feature-name').textContent = data.name;
+            document.getElementById('feature-desc').textContent = data.desc;
+            document.getElementById('feature-icon').textContent = data.icon;
+            document.getElementById('feature-id').textContent = data.id;
+            document.getElementById('feature-asil').textContent = data.asil;
+            document.getElementById('feature-category').textContent = data.category;
+            document.getElementById('feature-status').textContent = data.status;
+
+            // Update Metrics
+            document.getElementById('target-vehicles').textContent = data.targetVehicles.toLocaleString();
+            document.getElementById('active-rate').textContent = data.activeRate + '%';
+            document.getElementById('latency').textContent = data.latency + 'ms';
+            document.getElementById('dtc-errors').textContent = data.dtcErrors;
+
+            // Update Progress
+            document.getElementById('ota-progress').style.width = data.activeRate + '%';
+
+            // Update Status Badge
+            const statusBadge = document.getElementById('feature-status');
+            statusBadge.className = 'badge ' + (data.status === 'Active' ? 'badge-success' : data.status === 'Testing' ? 'badge-warning' : 'badge-danger');
+        }
+
+        featureSelect.addEventListener('change', updateFeatureInfo);
+        refreshBtn.addEventListener('click', updateFeatureInfo);
+
+        // Initial load
+        updateFeatureInfo();
+
+        // Stage Click
+        const stages = document.querySelectorAll('.stage-card');
+        stages.forEach(stage => {
+            stage.addEventListener('click', () => {
+                const stageId = stage.dataset.stage;
+                document.getElementById(`${stageId}-details`).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
