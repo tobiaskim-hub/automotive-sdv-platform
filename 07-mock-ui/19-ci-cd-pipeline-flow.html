@@ -264,6 +264,21 @@
                     <button class="control-btn" id="btn-simulation" onclick="toggleSimulation()">
                         <i class="fas fa-pause"></i> 시뮬레이션 정지
                     </button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-400">속도:</span>
+                        <button class="speed-btn" onclick="setSpeed(0.5)">
+                            <i class="fas fa-forward"></i> 0.5x
+                        </button>
+                        <button class="speed-btn active" onclick="setSpeed(1)">
+                            <i class="fas fa-play"></i> 1x
+                        </button>
+                        <button class="speed-btn" onclick="setSpeed(2)">
+                            <i class="fas fa-fast-forward"></i> 2x
+                        </button>
+                        <button class="speed-btn" onclick="setSpeed(5)">
+                            <i class="fas fa-rocket"></i> 5x
+                        </button>
+                    </div>
                     <div class="text-sm text-gray-400">
                         <i class="fas fa-info-circle mr-1"></i>
                         각 단계를 클릭하여 상세 정보 확인
@@ -747,6 +762,7 @@
         // Real-time Simulation
         let simulationRunning = true;
         let simulationInterval;
+        let simulationSpeed = 1; // Default 1x speed
         const activityLog = document.getElementById('activity-log');
 
         const logMessages = [
@@ -854,7 +870,33 @@
         }
 
         function startSimulation() {
-            simulationInterval = setInterval(simulateActivity, 2000); // Every 2 seconds
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+            }
+            const baseInterval = 2000; // Base 2 seconds
+            const interval = baseInterval / simulationSpeed;
+            simulationInterval = setInterval(simulateActivity, interval);
+        }
+
+        function setSpeed(speed) {
+            simulationSpeed = speed;
+            
+            // Update active button
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.speed-btn').classList.add('active');
+            
+            // Restart simulation with new speed
+            if (simulationRunning) {
+                startSimulation();
+            }
+            
+            // Update status text
+            const status = document.getElementById('simulation-status');
+            if (simulationRunning) {
+                status.innerHTML = `<i class="fas fa-circle text-green-400 animate-pulse"></i><span class="text-gray-400">실시간 시뮬레이션 진행 중 (${speed}x 속도)</span>`;
+            }
         }
 
         // Auto-update KPI values
@@ -908,6 +950,26 @@
                 background: rgba(0, 170, 210, 0.4);
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(0, 170, 210, 0.3);
+            }
+            .speed-btn {
+                background: rgba(100, 116, 139, 0.2);
+                border: 1px solid rgba(100, 116, 139, 0.5);
+                padding: 6px 12px;
+                border-radius: 8px;
+                color: #94a3b8;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .speed-btn:hover {
+                background: rgba(100, 116, 139, 0.4);
+                color: #e2e8f0;
+            }
+            .speed-btn.active {
+                background: rgba(0, 170, 210, 0.4);
+                border-color: #00aad2;
+                color: #00aad2;
+                font-weight: bold;
             }
         `;
         document.head.appendChild(style);
