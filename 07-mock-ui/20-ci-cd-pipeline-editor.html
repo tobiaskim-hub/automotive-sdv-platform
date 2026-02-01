@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - CI/CD Pipeline Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+        }
+
+        .editor-canvas {
+            background: 
+                linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+                linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            cursor: crosshair;
+            position: relative;
+            min-height: 600px;
+        }
+
+        .component-item {
+            cursor: move;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .component-item:hover {
+            transform: scale(1.05);
+            background: rgba(0, 170, 210, 0.1);
+        }
+
+        .canvas-component {
+            position: absolute;
+            cursor: move;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .canvas-component:hover {
+            box-shadow: 0 0 20px rgba(0, 170, 210, 0.5);
+        }
+
+        .canvas-component.selected {
+            box-shadow: 0 0 30px rgba(0, 170, 210, 0.8);
+            border: 2px solid var(--secondary) !important;
+        }
+
+        .connection-line {
+            stroke: rgba(148, 163, 184, 0.6);
+            stroke-width: 2;
+            fill: none;
+            pointer-events: none;
+        }
+
+        .connection-arrow {
+            fill: rgba(148, 163, 184, 0.6);
+        }
+
+        .toolbar-button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .toolbar-button:hover {
+            background: rgba(0, 170, 210, 0.2);
+            border-color: var(--secondary);
+        }
+
+        .toolbar-button.active {
+            background: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+
+        .property-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            width: 100%;
+        }
+
+        .property-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 10px rgba(0, 170, 210, 0.3);
+        }
+
+        .section-bg-code {
+            background: rgba(243, 244, 246, 0.05);
+        }
+
+        .section-bg-ci {
+            background: rgba(209, 250, 229, 0.05);
+        }
+
+        .section-bg-cd {
+            background: rgba(219, 234, 254, 0.05);
+        }
+
+        .component-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <!-- Header -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-arrow-left"></i> 돌아가기
+                </a>
+                <div class="h-8 w-px bg-gray-600"></div>
+                <h1 class="text-2xl font-bold">
+                    <i class="fas fa-project-diagram text-blue-400"></i>
+                    CI/CD Pipeline Editor
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">
+                    <i class="fas fa-save"></i> 자동 저장됨
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="grid grid-cols-12 gap-6">
+        <!-- Left Sidebar - Component Library -->
+        <div class="col-span-2">
+            <div class="glass-card p-4 sticky top-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-cube text-purple-400"></i>
+                    컴포넌트 라이브러리
+                </h3>
+                
+                <!-- Category: Code Development -->
+                <div class="mb-4">
+                    <div class="text-xs font-bold text-gray-400 uppercase mb-2">Code Development</div>
+                    <div class="space-y-2">
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="developer">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-gray-600">
+                                    <i class="fas fa-user-tie text-white"></i>
+                                </div>
+                                <div class="text-xs">Developer</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="github">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-gray-700">
+                                    <i class="fab fa-github text-white"></i>
+                                </div>
+                                <div class="text-xs">GitHub</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="gitlab">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-orange-600">
+                                    <i class="fab fa-gitlab text-white"></i>
+                                </div>
+                                <div class="text-xs">GitLab</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="sonarqube">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-blue-600">
+                                    <i class="fas fa-shield-alt text-white"></i>
+                                </div>
+                                <div class="text-xs">SonarQube</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Continuous Integration -->
+                <div class="mb-4">
+                    <div class="text-xs font-bold text-gray-400 uppercase mb-2">Continuous Integration</div>
+                    <div class="space-y-2">
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="jenkins">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-red-600">
+                                    <i class="fas fa-hammer text-white"></i>
+                                </div>
+                                <div class="text-xs">Jenkins</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="maven">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-orange-700">
+                                    <i class="fas fa-box text-white"></i>
+                                </div>
+                                <div class="text-xs">Maven</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="junit">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-green-600">
+                                    <i class="fas fa-check-circle text-white"></i>
+                                </div>
+                                <div class="text-xs">JUnit</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="jfrog">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-green-700">
+                                    <i class="fas fa-archive text-white"></i>
+                                </div>
+                                <div class="text-xs">JFrog</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Continuous Deployment -->
+                <div class="mb-4">
+                    <div class="text-xs font-bold text-gray-400 uppercase mb-2">Continuous Deployment</div>
+                    <div class="space-y-2">
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="spinnaker">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-blue-500">
+                                    <i class="fas fa-ship text-white"></i>
+                                </div>
+                                <div class="text-xs">Spinnaker</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="docker">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-blue-600">
+                                    <i class="fab fa-docker text-white"></i>
+                                </div>
+                                <div class="text-xs">Docker</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="kubernetes">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-blue-700">
+                                    <i class="fas fa-dharmachakra text-white"></i>
+                                </div>
+                                <div class="text-xs">Kubernetes</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="aws">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-yellow-600">
+                                    <i class="fab fa-aws text-white"></i>
+                                </div>
+                                <div class="text-xs">AWS</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Generic -->
+                <div>
+                    <div class="text-xs font-bold text-gray-400 uppercase mb-2">Generic</div>
+                    <div class="space-y-2">
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="box">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-gray-600">
+                                    <i class="fas fa-square text-white"></i>
+                                </div>
+                                <div class="text-xs">Box</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="circle">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-gray-600">
+                                    <i class="fas fa-circle text-white"></i>
+                                </div>
+                                <div class="text-xs">Circle</div>
+                            </div>
+                        </div>
+                        <div class="component-item p-2 rounded-lg border border-gray-700" draggable="true" data-component="label">
+                            <div class="flex items-center gap-2">
+                                <div class="component-icon bg-gray-600">
+                                    <i class="fas fa-font text-white"></i>
+                                </div>
+                                <div class="text-xs">Label</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Canvas -->
+        <div class="col-span-7">
+            <div class="glass-card p-4">
+                <!-- Toolbar -->
+                <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
+                    <div class="flex items-center gap-2">
+                        <button id="btn-select" class="toolbar-button active" title="선택 도구">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </button>
+                        <button id="btn-connection" class="toolbar-button" title="연결 도구">
+                            <i class="fas fa-link"></i>
+                        </button>
+                        <button id="btn-delete" class="toolbar-button" title="삭제">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <div class="w-px h-6 bg-gray-600"></div>
+                        <button id="btn-undo" class="toolbar-button" title="실행 취소 (Ctrl+Z)">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button id="btn-redo" class="toolbar-button" title="다시 실행 (Ctrl+Y)">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-load-template" class="toolbar-button">
+                            <i class="fas fa-file-import"></i> 템플릿 불러오기
+                        </button>
+                        <button id="btn-save" class="toolbar-button">
+                            <i class="fas fa-save"></i> 저장
+                        </button>
+                        <button id="btn-export-png" class="toolbar-button">
+                            <i class="fas fa-image"></i> PNG
+                        </button>
+                        <button id="btn-export-json" class="toolbar-button">
+                            <i class="fas fa-code"></i> JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas -->
+                <div id="canvas" class="editor-canvas glass-card p-4 relative overflow-hidden">
+                    <!-- SVG for connections -->
+                    <svg id="connection-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" class="connection-arrow" />
+                            </marker>
+                        </defs>
+                    </svg>
+                    <!-- Components will be added here dynamically -->
+                </div>
+
+                <!-- Status Bar -->
+                <div class="mt-4 flex items-center justify-between text-xs text-gray-400">
+                    <div>
+                        <span id="component-count">컴포넌트: 0개</span>
+                        <span class="mx-2">|</span>
+                        <span id="connection-count">연결: 0개</span>
+                    </div>
+                    <div>
+                        <span id="canvas-position">위치: (0, 0)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - Properties -->
+        <div class="col-span-3">
+            <div class="glass-card p-4 sticky top-6">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-sliders-h text-cyan-400"></i>
+                    속성 패널
+                </h3>
+
+                <div id="properties-panel">
+                    <!-- No selection state -->
+                    <div id="no-selection" class="text-center py-8 text-gray-500">
+                        <i class="fas fa-mouse-pointer text-4xl mb-2"></i>
+                        <p class="text-sm">컴포넌트를 선택하세요</p>
+                    </div>
+
+                    <!-- Component properties (hidden by default) -->
+                    <div id="component-properties" class="hidden space-y-4">
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">컴포넌트 유형</label>
+                            <input type="text" id="prop-type" class="property-input" readonly>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">라벨</label>
+                            <input type="text" id="prop-label" class="property-input" placeholder="컴포넌트 이름">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">X 위치</label>
+                                <input type="number" id="prop-x" class="property-input" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">Y 위치</label>
+                                <input type="number" id="prop-y" class="property-input" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">너비</label>
+                                <input type="number" id="prop-width" class="property-input" placeholder="120">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">높이</label>
+                                <input type="number" id="prop-height" class="property-input" placeholder="80">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">배경색</label>
+                            <div class="flex gap-2">
+                                <input type="color" id="prop-bgcolor" class="property-input w-16 h-10 cursor-pointer">
+                                <input type="text" id="prop-bgcolor-text" class="property-input flex-1" placeholder="#3b82f6">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">텍스트 색상</label>
+                            <div class="flex gap-2">
+                                <input type="color" id="prop-textcolor" class="property-input w-16 h-10 cursor-pointer">
+                                <input type="text" id="prop-textcolor-text" class="property-input flex-1" placeholder="#ffffff">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">테두리 색상</label>
+                            <div class="flex gap-2">
+                                <input type="color" id="prop-bordercolor" class="property-input w-16 h-10 cursor-pointer">
+                                <input type="text" id="prop-bordercolor-text" class="property-input flex-1" placeholder="#64748b">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">아이콘</label>
+                            <input type="text" id="prop-icon" class="property-input" placeholder="fas fa-code">
+                            <div class="text-xs text-gray-500 mt-1">FontAwesome 아이콘 클래스</div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase mb-2 block">설명</label>
+                            <textarea id="prop-description" class="property-input" rows="3" placeholder="컴포넌트 설명"></textarea>
+                        </div>
+                        <div class="pt-4 border-t border-gray-700">
+                            <button id="btn-delete-component" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors">
+                                <i class="fas fa-trash"></i> 컴포넌트 삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let components = [];
+        let connections = [];
+        let selectedComponent = null;
+        let tool = 'select'; // 'select', 'connection', 'delete'
+        let connectionStart = null;
+        let history = [];
+        let historyIndex = -1;
+        let componentIdCounter = 1;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        const canvas = document.getElementById('canvas');
+        const connectionSvg = document.getElementById('connection-svg');
+
+        // Component templates
+        const componentTemplates = {
+            developer: { label: 'Developer', icon: 'fas fa-user-tie', bgcolor: '#4b5563', textcolor: '#ffffff', width: 120, height: 80 },
+            github: { label: 'GitHub', icon: 'fab fa-github', bgcolor: '#1f2937', textcolor: '#ffffff', width: 120, height: 80 },
+            gitlab: { label: 'GitLab', icon: 'fab fa-gitlab', bgcolor: '#ea580c', textcolor: '#ffffff', width: 120, height: 80 },
+            sonarqube: { label: 'SonarQube', icon: 'fas fa-shield-alt', bgcolor: '#2563eb', textcolor: '#ffffff', width: 120, height: 80 },
+            jenkins: { label: 'Jenkins', icon: 'fas fa-hammer', bgcolor: '#dc2626', textcolor: '#ffffff', width: 120, height: 80 },
+            maven: { label: 'Maven', icon: 'fas fa-box', bgcolor: '#c2410c', textcolor: '#ffffff', width: 120, height: 80 },
+            junit: { label: 'JUnit', icon: 'fas fa-check-circle', bgcolor: '#16a34a', textcolor: '#ffffff', width: 120, height: 80 },
+            jfrog: { label: 'JFrog', icon: 'fas fa-archive', bgcolor: '#15803d', textcolor: '#ffffff', width: 120, height: 80 },
+            spinnaker: { label: 'Spinnaker', icon: 'fas fa-ship', bgcolor: '#3b82f6', textcolor: '#ffffff', width: 120, height: 80 },
+            docker: { label: 'Docker', icon: 'fab fa-docker', bgcolor: '#2563eb', textcolor: '#ffffff', width: 120, height: 80 },
+            kubernetes: { label: 'Kubernetes', icon: 'fas fa-dharmachakra', bgcolor: '#1d4ed8', textcolor: '#ffffff', width: 120, height: 80 },
+            aws: { label: 'AWS', icon: 'fab fa-aws', bgcolor: '#ca8a04', textcolor: '#ffffff', width: 120, height: 80 },
+            box: { label: 'Box', icon: 'fas fa-square', bgcolor: '#4b5563', textcolor: '#ffffff', width: 150, height: 100 },
+            circle: { label: 'Circle', icon: 'fas fa-circle', bgcolor: '#8b5cf6', textcolor: '#ffffff', width: 100, height: 100 },
+            label: { label: 'Label', icon: 'fas fa-font', bgcolor: 'transparent', textcolor: '#e2e8f0', width: 200, height: 40 }
+        };
+
+        // Default template (based on 19-ci-cd-pipeline-flow.html)
+        const defaultTemplate = {
+            components: [
+                { id: 1, type: 'developer', label: 'Developer', x: 50, y: 50, width: 120, height: 80, bgcolor: '#4b5563', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-user-tie', description: 'Code Push' },
+                { id: 2, type: 'github', label: 'GitHub', x: 50, y: 180, width: 120, height: 80, bgcolor: '#1f2937', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fab fa-github', description: 'SCM Repository' },
+                { id: 3, type: 'jenkins', label: 'Jenkins', x: 250, y: 120, width: 120, height: 80, bgcolor: '#dc2626', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-hammer', description: 'CI/CD Orchestration' },
+                { id: 4, type: 'maven', label: 'Maven Build', x: 420, y: 50, width: 120, height: 80, bgcolor: '#c2410c', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-box', description: 'Build & Compile' },
+                { id: 5, type: 'junit', label: 'JUnit Test', x: 420, y: 180, width: 120, height: 80, bgcolor: '#16a34a', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-check-circle', description: 'Unit Testing' },
+                { id: 6, type: 'jfrog', label: 'JFrog Artifactory', x: 590, y: 120, width: 150, height: 80, bgcolor: '#15803d', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-archive', description: 'Artifact Storage' },
+                { id: 7, type: 'docker', label: 'Docker', x: 790, y: 50, width: 120, height: 80, bgcolor: '#2563eb', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fab fa-docker', description: 'Container Image' },
+                { id: 8, type: 'kubernetes', label: 'Kubernetes', x: 790, y: 180, width: 120, height: 80, bgcolor: '#1d4ed8', textcolor: '#ffffff', bordercolor: '#64748b', icon: 'fas fa-dharmachakra', description: 'Orchestration' },
+            ],
+            connections: [
+                { from: 1, to: 2 },
+                { from: 2, to: 3 },
+                { from: 3, to: 4 },
+                { from: 3, to: 5 },
+                { from: 4, to: 6 },
+                { from: 5, to: 6 },
+                { from: 6, to: 7 },
+                { from: 7, to: 8 }
+            ]
+        };
+
+        // Initialize
+        function init() {
+            setupEventListeners();
+            updateCanvas();
+            updateStats();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Toolbar buttons
+            document.getElementById('btn-select').addEventListener('click', () => setTool('select'));
+            document.getElementById('btn-connection').addEventListener('click', () => setTool('connection'));
+            document.getElementById('btn-delete').addEventListener('click', () => setTool('delete'));
+            document.getElementById('btn-undo').addEventListener('click', undo);
+            document.getElementById('btn-redo').addEventListener('click', redo);
+            document.getElementById('btn-save').addEventListener('click', saveToLocalStorage);
+            document.getElementById('btn-export-png').addEventListener('click', exportToPNG);
+            document.getElementById('btn-export-json').addEventListener('click', exportToJSON);
+            document.getElementById('btn-load-template').addEventListener('click', loadDefaultTemplate);
+            document.getElementById('btn-delete-component').addEventListener('click', deleteSelectedComponent);
+
+            // Drag and drop from library
+            const libraryItems = document.querySelectorAll('.component-item');
+            libraryItems.forEach(item => {
+                item.addEventListener('dragstart', handleLibraryDragStart);
+            });
+
+            canvas.addEventListener('dragover', handleCanvasDragOver);
+            canvas.addEventListener('drop', handleCanvasDrop);
+
+            // Canvas mouse events
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+
+            // Property inputs
+            document.getElementById('prop-label').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-x').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-y').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-width').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-height').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-bgcolor').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-bgcolor-text').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-textcolor').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-textcolor-text').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-bordercolor').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-bordercolor-text').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-icon').addEventListener('input', updateComponentProperty);
+            document.getElementById('prop-description').addEventListener('input', updateComponentProperty);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyDown);
+
+            // Load from localStorage
+            loadFromLocalStorage();
+        }
+
+        // Tool selection
+        function setTool(newTool) {
+            tool = newTool;
+            document.querySelectorAll('.toolbar-button').forEach(btn => btn.classList.remove('active'));
+            if (newTool === 'select') document.getElementById('btn-select').classList.add('active');
+            if (newTool === 'connection') document.getElementById('btn-connection').classList.add('active');
+            if (newTool === 'delete') document.getElementById('btn-delete').classList.add('active');
+            canvas.style.cursor = newTool === 'connection' ? 'crosshair' : (newTool === 'delete' ? 'not-allowed' : 'default');
+        }
+
+        // Drag from library
+        function handleLibraryDragStart(e) {
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('component-type', e.currentTarget.getAttribute('data-component'));
+        }
+
+        function handleCanvasDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }
+
+        function handleCanvasDrop(e) {
+            e.preventDefault();
+            const componentType = e.dataTransfer.getData('component-type');
+            if (!componentType) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            addComponent(componentType, x, y);
+        }
+
+        // Add component
+        function addComponent(type, x, y) {
+            const template = componentTemplates[type];
+            if (!template) return;
+
+            const component = {
+                id: componentIdCounter++,
+                type: type,
+                label: template.label,
+                x: x,
+                y: y,
+                width: template.width,
+                height: template.height,
+                bgcolor: template.bgcolor,
+                textcolor: template.textcolor,
+                bordercolor: '#64748b',
+                icon: template.icon,
+                description: ''
+            };
+
+            components.push(component);
+            saveState();
+            updateCanvas();
+            updateStats();
+        }
+
+        // Update canvas
+        function updateCanvas() {
+            // Clear existing components
+            const existingComponents = canvas.querySelectorAll('.canvas-component');
+            existingComponents.forEach(el => el.remove());
+
+            // Render components
+            components.forEach(comp => {
+                const el = document.createElement('div');
+                el.className = 'canvas-component glass-card';
+                el.setAttribute('data-id', comp.id);
+                el.style.left = comp.x + 'px';
+                el.style.top = comp.y + 'px';
+                el.style.width = comp.width + 'px';
+                el.style.height = comp.height + 'px';
+                el.style.backgroundColor = comp.bgcolor;
+                el.style.color = comp.textcolor;
+                el.style.border = `2px solid ${comp.bordercolor}`;
+                el.style.padding = '12px';
+                el.style.borderRadius = '8px';
+                el.style.display = 'flex';
+                el.style.flexDirection = 'column';
+                el.style.alignItems = 'center';
+                el.style.justifyContent = 'center';
+                el.style.textAlign = 'center';
+                el.style.fontSize = '12px';
+                el.style.fontWeight = '600';
+                el.style.zIndex = '10';
+
+                if (selectedComponent && selectedComponent.id === comp.id) {
+                    el.classList.add('selected');
+                }
+
+                // Icon
+                if (comp.icon) {
+                    const icon = document.createElement('i');
+                    icon.className = comp.icon;
+                    icon.style.fontSize = '24px';
+                    icon.style.marginBottom = '8px';
+                    el.appendChild(icon);
+                }
+
+                // Label
+                const label = document.createElement('div');
+                label.textContent = comp.label;
+                label.style.wordBreak = 'break-word';
+                el.appendChild(label);
+
+                // Event listeners
+                el.addEventListener('mousedown', (e) => handleComponentMouseDown(e, comp));
+                el.addEventListener('click', (e) => handleComponentClick(e, comp));
+
+                canvas.appendChild(el);
+            });
+
+            // Render connections
+            updateConnections();
+        }
+
+        // Update connections
+        function updateConnections() {
+            // Clear existing lines
+            connectionSvg.querySelectorAll('.connection-line').forEach(line => line.remove());
+
+            connections.forEach(conn => {
+                const fromComp = components.find(c => c.id === conn.from);
+                const toComp = components.find(c => c.id === conn.to);
+                if (!fromComp || !toComp) return;
+
+                const x1 = fromComp.x + fromComp.width / 2;
+                const y1 = fromComp.y + fromComp.height / 2;
+                const x2 = toComp.x + toComp.width / 2;
+                const y2 = toComp.y + toComp.height / 2;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.classList.add('connection-line');
+                path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                connectionSvg.appendChild(path);
+            });
+        }
+
+        // Handle component mouse down
+        function handleComponentMouseDown(e, comp) {
+            e.stopPropagation();
+
+            if (tool === 'delete') {
+                deleteComponent(comp.id);
+                return;
+            }
+
+            if (tool === 'connection') {
+                if (!connectionStart) {
+                    connectionStart = comp;
+                } else {
+                    if (connectionStart.id !== comp.id) {
+                        addConnection(connectionStart.id, comp.id);
+                    }
+                    connectionStart = null;
+                }
+                return;
+            }
+
+            if (tool === 'select') {
+                selectComponent(comp);
+                isDragging = true;
+                const rect = canvas.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left - comp.x;
+                dragOffset.y = e.clientY - rect.top - comp.y;
+            }
+        }
+
+        // Handle component click
+        function handleComponentClick(e, comp) {
+            e.stopPropagation();
+            if (tool === 'select') {
+                selectComponent(comp);
+            }
+        }
+
+        // Handle canvas mouse down
+        function handleCanvasMouseDown(e) {
+            if (e.target === canvas) {
+                deselectComponent();
+            }
+        }
+
+        // Handle canvas mouse move
+        function handleCanvasMouseMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.round(e.clientX - rect.left);
+            const y = Math.round(e.clientY - rect.top);
+            document.getElementById('canvas-position').textContent = `위치: (${x}, ${y})`;
+
+            if (isDragging && selectedComponent && tool === 'select') {
+                selectedComponent.x = x - dragOffset.x;
+                selectedComponent.y = y - dragOffset.y;
+                updateCanvas();
+                updatePropertiesPanel();
+            }
+        }
+
+        // Handle canvas mouse up
+        function handleCanvasMouseUp(e) {
+            if (isDragging) {
+                isDragging = false;
+                saveState();
+            }
+        }
+
+        // Select component
+        function selectComponent(comp) {
+            selectedComponent = comp;
+            updateCanvas();
+            updatePropertiesPanel();
+        }
+
+        // Deselect component
+        function deselectComponent() {
+            selectedComponent = null;
+            updateCanvas();
+            updatePropertiesPanel();
+        }
+
+        // Delete component
+        function deleteComponent(id) {
+            components = components.filter(c => c.id !== id);
+            connections = connections.filter(conn => conn.from !== id && conn.to !== id);
+            if (selectedComponent && selectedComponent.id === id) {
+                selectedComponent = null;
+            }
+            saveState();
+            updateCanvas();
+            updateStats();
+            updatePropertiesPanel();
+        }
+
+        // Delete selected component
+        function deleteSelectedComponent() {
+            if (selectedComponent) {
+                deleteComponent(selectedComponent.id);
+            }
+        }
+
+        // Add connection
+        function addConnection(fromId, toId) {
+            // Check if connection already exists
+            const exists = connections.some(conn => conn.from === fromId && conn.to === toId);
+            if (!exists) {
+                connections.push({ from: fromId, to: toId });
+                saveState();
+                updateCanvas();
+                updateStats();
+            }
+        }
+
+        // Update properties panel
+        function updatePropertiesPanel() {
+            const noSelection = document.getElementById('no-selection');
+            const componentProperties = document.getElementById('component-properties');
+
+            if (!selectedComponent) {
+                noSelection.classList.remove('hidden');
+                componentProperties.classList.add('hidden');
+                return;
+            }
+
+            noSelection.classList.add('hidden');
+            componentProperties.classList.remove('hidden');
+
+            document.getElementById('prop-type').value = selectedComponent.type;
+            document.getElementById('prop-label').value = selectedComponent.label;
+            document.getElementById('prop-x').value = selectedComponent.x;
+            document.getElementById('prop-y').value = selectedComponent.y;
+            document.getElementById('prop-width').value = selectedComponent.width;
+            document.getElementById('prop-height').value = selectedComponent.height;
+            document.getElementById('prop-bgcolor').value = selectedComponent.bgcolor;
+            document.getElementById('prop-bgcolor-text').value = selectedComponent.bgcolor;
+            document.getElementById('prop-textcolor').value = selectedComponent.textcolor;
+            document.getElementById('prop-textcolor-text').value = selectedComponent.textcolor;
+            document.getElementById('prop-bordercolor').value = selectedComponent.bordercolor;
+            document.getElementById('prop-bordercolor-text').value = selectedComponent.bordercolor;
+            document.getElementById('prop-icon').value = selectedComponent.icon;
+            document.getElementById('prop-description').value = selectedComponent.description || '';
+        }
+
+        // Update component property
+        function updateComponentProperty(e) {
+            if (!selectedComponent) return;
+
+            const prop = e.target.id.replace('prop-', '');
+            let value = e.target.value;
+
+            if (prop === 'x' || prop === 'y' || prop === 'width' || prop === 'height') {
+                value = parseInt(value) || 0;
+            }
+
+            if (prop === 'bgcolor-text') {
+                selectedComponent.bgcolor = value;
+                document.getElementById('prop-bgcolor').value = value;
+            } else if (prop === 'textcolor-text') {
+                selectedComponent.textcolor = value;
+                document.getElementById('prop-textcolor').value = value;
+            } else if (prop === 'bordercolor-text') {
+                selectedComponent.bordercolor = value;
+                document.getElementById('prop-bordercolor').value = value;
+            } else if (prop === 'bgcolor') {
+                selectedComponent.bgcolor = value;
+                document.getElementById('prop-bgcolor-text').value = value;
+            } else if (prop === 'textcolor') {
+                selectedComponent.textcolor = value;
+                document.getElementById('prop-textcolor-text').value = value;
+            } else if (prop === 'bordercolor') {
+                selectedComponent.bordercolor = value;
+                document.getElementById('prop-bordercolor-text').value = value;
+            } else {
+                selectedComponent[prop] = value;
+            }
+
+            updateCanvas();
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('component-count').textContent = `컴포넌트: ${components.length}개`;
+            document.getElementById('connection-count').textContent = `연결: ${connections.length}개`;
+        }
+
+        // Save state for undo/redo
+        function saveState() {
+            const state = {
+                components: JSON.parse(JSON.stringify(components)),
+                connections: JSON.parse(JSON.stringify(connections))
+            };
+            history = history.slice(0, historyIndex + 1);
+            history.push(state);
+            historyIndex++;
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+
+        // Undo
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                const state = history[historyIndex];
+                components = JSON.parse(JSON.stringify(state.components));
+                connections = JSON.parse(JSON.stringify(state.connections));
+                updateCanvas();
+                updateStats();
+                updatePropertiesPanel();
+            }
+        }
+
+        // Redo
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                const state = history[historyIndex];
+                components = JSON.parse(JSON.stringify(state.components));
+                connections = JSON.parse(JSON.stringify(state.connections));
+                updateCanvas();
+                updateStats();
+                updatePropertiesPanel();
+            }
+        }
+
+        // Keyboard shortcuts
+        function handleKeyDown(e) {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            if (e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+            if (e.key === 'Delete' && selectedComponent) {
+                e.preventDefault();
+                deleteSelectedComponent();
+            }
+        }
+
+        // Save to localStorage
+        function saveToLocalStorage() {
+            const data = {
+                components: components,
+                connections: connections
+            };
+            localStorage.setItem('pipeline-editor-data', JSON.stringify(data));
+            alert('저장되었습니다!');
+        }
+
+        // Load from localStorage
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('pipeline-editor-data');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    components = parsed.components || [];
+                    connections = parsed.connections || [];
+                    componentIdCounter = Math.max(...components.map(c => c.id), 0) + 1;
+                    saveState();
+                    updateCanvas();
+                    updateStats();
+                } catch (e) {
+                    console.error('Failed to load data:', e);
+                }
+            }
+        }
+
+        // Load default template
+        function loadDefaultTemplate() {
+            if (confirm('기본 템플릿을 불러오시겠습니까? 현재 작업이 초기화됩니다.')) {
+                components = JSON.parse(JSON.stringify(defaultTemplate.components));
+                connections = JSON.parse(JSON.stringify(defaultTemplate.connections));
+                componentIdCounter = Math.max(...components.map(c => c.id), 0) + 1;
+                saveState();
+                updateCanvas();
+                updateStats();
+            }
+        }
+
+        // Export to PNG
+        function exportToPNG() {
+            // This is a simplified version - real implementation would need html2canvas or similar
+            alert('PNG 내보내기: 실제 구현에서는 html2canvas 라이브러리를 사용합니다.');
+        }
+
+        // Export to JSON
+        function exportToJSON() {
+            const data = {
+                components: components,
+                connections: connections
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pipeline-editor.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
