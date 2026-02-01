@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - CI/CD Pipeline Detailed Diagram</title>
+    
+    <!-- JointJS CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+        }
+
+        #pipeline-paper {
+            background: white;
+            border-radius: 8px;
+        }
+
+        .joint-element .joint-port-body {
+            display: none;
+        }
+
+        /* Custom styles for diagram elements */
+        .tool-bubble {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tool-bubble:hover {
+            opacity: 0.8;
+        }
+
+        /* Arrow box styling */
+        .arrow-box {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+        }
+
+        /* Legend styles */
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <!-- Header -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-arrow-left"></i> 돌아가기
+                </a>
+                <div class="h-8 w-px bg-gray-600"></div>
+                <h1 class="text-2xl font-bold">
+                    <i class="fas fa-project-diagram text-blue-400"></i>
+                    CI/CD Pipeline - Detailed Flow Diagram
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-reset-zoom" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                    <i class="fas fa-search-minus"></i> 초기화
+                </button>
+                <button id="btn-export-svg" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                    <i class="fas fa-download"></i> SVG 내보내기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="glass-card p-4 mb-6">
+        <h3 class="text-sm font-bold mb-3 text-gray-300">범례 (Legend)</h3>
+        <div class="grid grid-cols-6 gap-3">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e8d5f0;"></div>
+                <span>Source Code</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #d4f0d4;"></div>
+                <span>Build Tools</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #d4e0f7;"></div>
+                <span>Quality Analysis</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffe0d0;"></div>
+                <span>Deployment</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd4e0;"></div>
+                <span>CI Servers</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e0d4ff;"></div>
+                <span>Binaries</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="glass-card p-6">
+        <div id="pipeline-paper" style="width: 100%; height: 1000px;"></div>
+    </div>
+
+    <!-- JointJS Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.6.0/backbone-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.js"></script>
+
+    <script>
+        // Initialize JointJS graph and paper
+        const graph = new joint.dia.Graph();
+        const paper = new joint.dia.Paper({
+            el: document.getElementById('pipeline-paper'),
+            model: graph,
+            width: 1400,
+            height: 1000,
+            gridSize: 10,
+            background: { color: '#ffffff' },
+            interactive: { elementMove: false }
+        });
+
+        // Custom Chevron (Arrow) Shape
+        const ChevronShape = joint.shapes.standard.Polygon.extend({
+            defaults: joint.util.deepSupplement({
+                type: 'custom.Chevron',
+                size: { width: 200, height: 80 },
+                attrs: {
+                    body: {
+                        refPoints: '0,40 20,0 180,0 200,40 180,80 20,80',
+                        strokeWidth: 3,
+                        fill: '#66bb6a',
+                        stroke: '#4caf50'
+                    },
+                    label: {
+                        text: 'Stage Name',
+                        fill: '#000',
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        textAnchor: 'middle',
+                        refX: '50%',
+                        refY: '50%',
+                        textVerticalAnchor: 'middle'
+                    }
+                }
+            }, joint.shapes.standard.Polygon.prototype.defaults)
+        });
+
+        // Helper function to create chevron arrow box
+        function createChevron(x, y, width, height, text, fillColor, strokeColor) {
+            const chevron = new ChevronShape({
+                position: { x: x, y: y },
+                size: { width: width, height: height },
+                attrs: {
+                    body: {
+                        refPoints: `0,${height/2} ${width*0.1},0 ${width*0.9},0 ${width},${height/2} ${width*0.9},${height} ${width*0.1},${height}`,
+                        fill: fillColor,
+                        stroke: strokeColor,
+                        strokeWidth: 3
+                    },
+                    label: {
+                        text: text,
+                        fontSize: 13,
+                        fontWeight: 'bold'
+                    }
+                }
+            });
+            return chevron;
+        }
+
+        // Helper function to create tool group background
+        function createToolGroupBg(x, y, width, height, color) {
+            const ellipse = new joint.shapes.standard.Ellipse({
+                position: { x: x, y: y },
+                size: { width: width, height: height },
+                attrs: {
+                    body: {
+                        fill: color,
+                        stroke: 'none',
+                        opacity: 0.4
+                    },
+                    label: { text: '' }
+                }
+            });
+            return ellipse;
+        }
+
+        // Helper function to create tool group header
+        function createToolHeader(x, y, width, text, color) {
+            const header = new joint.shapes.standard.Rectangle({
+                position: { x: x, y: y },
+                size: { width: width, height: 36 },
+                attrs: {
+                    body: {
+                        fill: color,
+                        stroke: 'none',
+                        rx: 18,
+                        ry: 18
+                    },
+                    label: {
+                        text: text,
+                        fill: 'white',
+                        fontSize: 13,
+                        fontWeight: 'bold',
+                        textAnchor: 'middle',
+                        textVerticalAnchor: 'middle'
+                    }
+                }
+            });
+            return header;
+        }
+
+        // Helper function to create tool bubble
+        function createToolBubble(x, y, size, text, bgColor = 'white') {
+            const circle = new joint.shapes.standard.Circle({
+                position: { x: x, y: y },
+                size: { width: size, height: size },
+                attrs: {
+                    body: {
+                        fill: bgColor,
+                        stroke: '#ddd',
+                        strokeWidth: 2,
+                        filter: {
+                            name: 'dropShadow',
+                            args: { dx: 0, dy: 2, blur: 4, color: 'rgba(0,0,0,0.1)' }
+                        }
+                    },
+                    label: {
+                        text: text,
+                        fill: '#333',
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        textAnchor: 'middle',
+                        textVerticalAnchor: 'middle'
+                    }
+                }
+            });
+            return circle;
+        }
+
+        // Helper function to create dashed line
+        function createDashedLine(x1, y1, x2, y2) {
+            const link = new joint.shapes.standard.Link({
+                source: { x: x1, y: y1 },
+                target: { x: x2, y: y2 },
+                attrs: {
+                    line: {
+                        stroke: '#333',
+                        strokeWidth: 2,
+                        strokeDasharray: '5,5',
+                        targetMarker: { display: 'none' }
+                    }
+                },
+                connector: { name: 'normal' }
+            });
+            return link;
+        }
+
+        // Helper function to create label text
+        function createLabel(x, y, text) {
+            const label = new joint.shapes.standard.Rectangle({
+                position: { x: x, y: y },
+                size: { width: 100, height: 30 },
+                attrs: {
+                    body: {
+                        fill: 'transparent',
+                        stroke: 'none'
+                    },
+                    label: {
+                        text: text,
+                        fill: '#333',
+                        fontSize: 11,
+                        fontStyle: 'italic',
+                        textAnchor: 'middle',
+                        textVerticalAnchor: 'middle'
+                    }
+                }
+            });
+            return label;
+        }
+
+        // ========================================
+        // BUILD DIAGRAM
+        // ========================================
+
+        // === TOP SECTION: Tool Groups ===
+
+        // 1. Source Code Management (Purple)
+        const sourceBg = createToolGroupBg(50, 10, 240, 180, '#e8d5f0');
+        sourceBg.addTo(graph);
+
+        const sourceHeader = createToolHeader(80, 15, 180, 'Source Code\nManagement', '#9c27b0');
+        sourceHeader.addTo(graph);
+
+        const gitBubble = createToolBubble(80, 80, 70, 'git');
+        gitBubble.addTo(graph);
+
+        const svnBubble = createToolBubble(190, 80, 70, 'SVN');
+        svnBubble.addTo(graph);
+
+        // 2. Build Tools (Green)
+        const buildBg = createToolGroupBg(380, 10, 240, 180, '#d4f0d4');
+        buildBg.addTo(graph);
+
+        const buildHeader = createToolHeader(430, 15, 140, 'Build Tools', '#4caf50');
+        buildHeader.addTo(graph);
+
+        const mavenBubble = createToolBubble(410, 80, 70, 'maven');
+        mavenBubble.addTo(graph);
+
+        const sbtBubble = createToolBubble(520, 80, 70, 'sbt');
+        sbtBubble.addTo(graph);
+
+        // 3. Quality Analysis (Blue)
+        const qualityBg = createToolGroupBg(710, 10, 240, 180, '#d4e0f7');
+        qualityBg.addTo(graph);
+
+        const qualityHeader = createToolHeader(740, 15, 180, 'Quality Analysis', '#3f51b5');
+        qualityHeader.addTo(graph);
+
+        const sonarBubble = createToolBubble(740, 80, 70, 'sonar');
+        sonarBubble.addTo(graph);
+
+        const fortifyBubble = createToolBubble(850, 80, 70, 'Fortify');
+        fortifyBubble.addTo(graph);
+
+        const coverityBubble = createToolBubble(795, 140, 70, 'Coverity');
+        coverityBubble.addTo(graph);
+
+        // Hooks icon (right side)
+        const hooksIcon = new joint.shapes.standard.Circle({
+            position: { x: 1000, y: 50 },
+            size: { width: 50, height: 50 },
+            attrs: {
+                body: {
+                    fill: '#ff5252',
+                    stroke: 'none'
+                },
+                label: {
+                    text: '🪝',
+                    fontSize: 24
+                }
+            }
+        });
+        hooksIcon.addTo(graph);
+
+        // === DASHED LINES (Top to Pipeline) ===
+        const dash1 = createDashedLine(115, 190, 115, 260);
+        dash1.addTo(graph);
+        const dash2 = createDashedLine(125, 190, 125, 260);
+        dash2.addTo(graph);
+
+        const dashLabel1 = createLabel(30, 210, 'Poll\nBranches');
+        dashLabel1.addTo(graph);
+
+        const dash3 = createDashedLine(275, 190, 275, 260);
+        dash3.addTo(graph);
+        const dash4 = createDashedLine(285, 190, 285, 260);
+        dash4.addTo(graph);
+
+        const dashLabel2 = createLabel(200, 210, 'Check-out\ncode');
+        dashLabel2.addTo(graph);
+
+        const dash5 = createDashedLine(445, 190, 445, 260);
+        dash5.addTo(graph);
+        const dash6 = createDashedLine(515, 190, 515, 260);
+        dash6.addTo(graph);
+
+        const dashLabel3 = createLabel(420, 210, 'Validate\nBuilds');
+        dashLabel3.addTo(graph);
+
+        const dash7 = createDashedLine(825, 190, 825, 260);
+        dash7.addTo(graph);
+        const dash8 = createDashedLine(835, 190, 835, 260);
+        dash8.addTo(graph);
+
+        const dashLabel4 = createLabel(760, 210, 'Sanity\nChecks');
+        dashLabel4.addTo(graph);
+
+        // === TOP PIPELINE (Chevron Arrows) ===
+        const checkCodeBox = createChevron(50, 270, 200, 70, 'Check our Code\nand Build', '#66bb6a', '#4caf50');
+        checkCodeBox.addTo(graph);
+
+        const unitTestBox = createChevron(265, 270, 180, 70, 'Unit\nTesting', '#7e57c2', '#6a1b9a');
+        unitTestBox.addTo(graph);
+
+        const qualityControlBox = createChevron(460, 270, 180, 70, 'Quality\nControl', '#ef5350', '#d32f2f');
+        qualityControlBox.addTo(graph);
+
+        const deployTestBox = createChevron(655, 270, 200, 70, 'Deploy to Test\nEnvironment', '#7e57c2', '#6a1b9a');
+        deployTestBox.addTo(graph);
+
+        // === RIGHT SIDE FLOW (Fetch Latest Builds) ===
+        const fetchBox = new joint.shapes.standard.Rectangle({
+            position: { x: 920, y: 280 },
+            size: { width: 100, height: 180 },
+            attrs: {
+                body: {
+                    fill: '#ffcdd2',
+                    stroke: '#e57373',
+                    strokeWidth: 3,
+                    rx: 5,
+                    ry: 5
+                },
+                label: {
+                    text: 'Fetch\nLatest\nBuilds',
+                    fill: '#000',
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    textVerticalAnchor: 'middle'
+                }
+            }
+        });
+        fetchBox.addTo(graph);
+
+        const integrationLabel = new joint.shapes.standard.Rectangle({
+            position: { x: 920, y: 475 },
+            size: { width: 100, height: 60 },
+            attrs: {
+                body: {
+                    fill: 'transparent',
+                    stroke: 'none'
+                },
+                label: {
+                    text: 'Integration\nTesting',
+                    fill: '#333',
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                    textVerticalAnchor: 'middle'
+                }
+            }
+        });
+        integrationLabel.addTo(graph);
+
+        // === MIDDLE SECTION: CI Servers ===
+        const ciServersBg = createToolGroupBg(380, 420, 280, 140, '#ffd4e0');
+        ciServersBg.addTo(graph);
+
+        const ciHeader = new joint.shapes.standard.Rectangle({
+            position: { x: 390, y: 390 },
+            size: { width: 260, height: 40 },
+            attrs: {
+                body: {
+                    fill: '#ff5252',
+                    stroke: 'none',
+                    rx: 20,
+                    ry: 20
+                },
+                label: {
+                    text: 'Ideal Continuous Delivery\nProcess',
+                    fill: 'white',
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    textVerticalAnchor: 'middle'
+                }
+            }
+        });
+        ciHeader.addTo(graph);
+
+        const jenkinsBubble = createToolBubble(410, 460, 70, 'Jenkins');
+        jenkinsBubble.addTo(graph);
+
+        const travisBubble = createToolBubble(500, 460, 70, 'Travis CI');
+        travisBubble.addTo(graph);
+
+        const bambooBubble = createToolBubble(590, 460, 70, 'Bamboo');
+        bambooBubble.addTo(graph);
+
+        const ciLabel = createLabel(450, 540, 'Continuous Integration Servers');
+        ciLabel.addTo(graph);
+
+        // Curved arrows (left and right)
+        const leftCurve = new joint.shapes.standard.Link({
+            source: { x: 350, y: 450 },
+            target: { x: 380, y: 490 },
+            vertices: [{ x: 320, y: 420 }, { x: 340, y: 470 }],
+            attrs: {
+                line: {
+                    stroke: '#ff8c00',
+                    strokeWidth: 6,
+                    targetMarker: {
+                        type: 'path',
+                        d: 'M 10 -5 0 0 10 5 Z',
+                        fill: '#ff8c00'
+                    }
+                }
+            },
+            connector: { name: 'smooth' }
+        });
+        leftCurve.addTo(graph);
+
+        const rightCurve = new joint.shapes.standard.Link({
+            source: { x: 660, y: 490 },
+            target: { x: 690, y: 450 },
+            vertices: [{ x: 700, y: 470 }, { x: 720, y: 420 }],
+            attrs: {
+                line: {
+                    stroke: '#ff8c00',
+                    strokeWidth: 6,
+                    targetMarker: {
+                        type: 'path',
+                        d: 'M 10 -5 0 0 10 5 Z',
+                        fill: '#ff8c00'
+                    }
+                }
+            },
+            connector: { name: 'smooth' }
+        });
+        rightCurve.addTo(graph);
+
+        // === BOTTOM PIPELINE (Reverse Chevron Arrows) ===
+        const packageBox = createChevron(870, 580, 200, 70, 'Packaging and\nArchiving', '#ff9800', '#f57c00');
+        packageBox.addTo(graph);
+
+        const fetchReleaseBox = createChevron(655, 580, 200, 70, 'Fetch\nRelease Ready\nBuilds', '#7e57c2', '#6a1b9a');
+        fetchReleaseBox.addTo(graph);
+
+        const deployPreProdBox = createChevron(460, 580, 180, 70, 'Deploy to Pre-\nProduction\nEnvironment', '#7e57c2', '#6a1b9a');
+        deployPreProdBox.addTo(graph);
+
+        const acceptanceBox = createChevron(265, 580, 180, 70, 'Acceptance\nTesting', '#66bb6a', '#4caf50');
+        acceptanceBox.addTo(graph);
+
+        const deployProdBox = createChevron(50, 580, 200, 70, 'Deploy to\nProduction\nEnvironment', '#ff9800', '#f57c00');
+        deployProdBox.addTo(graph);
+
+        // Envelope icon (left)
+        const envelopeIcon = new joint.shapes.standard.Path({
+            position: { x: 10, y: 610 },
+            size: { width: 30, height: 30 },
+            attrs: {
+                body: {
+                    fill: '#ff9800',
+                    stroke: '#f57c00',
+                    strokeWidth: 2,
+                    d: 'M 0,10 L 15,0 L 30,10 L 30,30 L 0,30 Z M 0,10 L 15,20 L 30,10'
+                }
+            }
+        });
+        envelopeIcon.addTo(graph);
+
+        // === DASHED LINES (Pipeline to Bottom) ===
+        const dash9 = createDashedLine(140, 660, 140, 730);
+        dash9.addTo(graph);
+        const dash10 = createDashedLine(150, 660, 150, 730);
+        dash10.addTo(graph);
+
+        const dash11 = createDashedLine(355, 660, 355, 730);
+        dash11.addTo(graph);
+        const dash12 = createDashedLine(365, 660, 365, 730);
+        dash12.addTo(graph);
+
+        const dash13 = createDashedLine(550, 660, 550, 730);
+        dash13.addTo(graph);
+        const dash14 = createDashedLine(560, 660, 560, 730);
+        dash14.addTo(graph);
+
+        const dash15 = createDashedLine(960, 660, 960, 730);
+        dash15.addTo(graph);
+        const dash16 = createDashedLine(970, 660, 970, 730);
+        dash16.addTo(graph);
+
+        // === BOTTOM SECTION: Tool Groups ===
+
+        // 4. Deployment Environment (Orange)
+        const deploymentBg = createToolGroupBg(30, 740, 240, 200, '#ffe0d0');
+        deploymentBg.addTo(graph);
+
+        const deploymentHeader = createToolHeader(60, 755, 180, 'Deployment\nEnvironment', '#ff9800');
+        deploymentHeader.addTo(graph);
+
+        const vmwareBubble = createToolBubble(60, 820, 60, 'VMware');
+        vmwareBubble.addTo(graph);
+
+        const testBubble = createToolBubble(140, 820, 60, 'Test');
+        testBubble.addTo(graph);
+
+        const rackspaceBubble = createToolBubble(60, 890, 60, 'Rackspace');
+        rackspaceBubble.addTo(graph);
+
+        const preProdBubble = createToolBubble(140, 820, 60, 'Pre-Prod');
+        preProdBubble.addTo(graph);
+
+        const amazonBubble = createToolBubble(60, 890, 60, 'Amazon');
+        amazonBubble.addTo(graph);
+
+        const prodBubble = createToolBubble(140, 890, 60, 'Prod');
+        prodBubble.addTo(graph);
+
+        const openstackBubble = createToolBubble(220, 855, 60, 'OpenStack');
+        openstackBubble.addTo(graph);
+
+        // 5. Configuration Management (Green)
+        const configBg = createToolGroupBg(330, 740, 260, 200, '#d4f0d4');
+        configBg.addTo(graph);
+
+        const configHeader = createToolHeader(340, 755, 240, 'Configuration Management\nand Deployment Tools', '#4caf50');
+        configHeader.addTo(graph);
+
+        const liveRebelBubble = createToolBubble(360, 840, 60, 'LiveRebel');
+        liveRebelBubble.addTo(graph);
+
+        const cfEngineBubble = createToolBubble(440, 840, 60, 'CFEngine');
+        cfEngineBubble.addTo(graph);
+
+        const chefBubble = createToolBubble(520, 840, 60, 'Chef');
+        chefBubble.addTo(graph);
+
+        const rundeckBubble = createToolBubble(400, 900, 70, 'RUNDECK');
+        rundeckBubble.addTo(graph);
+
+        const puppetBubble = createToolBubble(490, 900, 70, 'Puppet');
+        puppetBubble.addTo(graph);
+
+        const configLabel = createLabel(400, 920, 'Avoid configuration Drift Insure\nall environment are in sync');
+        configLabel.addTo(graph);
+
+        // 6. Store Valid Binaries (Purple)
+        const binaryBg = createToolGroupBg(650, 740, 180, 200, '#e0d4ff');
+        binaryBg.addTo(graph);
+
+        const binaryHeader = createToolHeader(670, 755, 140, 'Store Valid\nBinaries\nPackages', '#7e57c2');
+        binaryHeader.addTo(graph);
+
+        const databaseIcon = new joint.shapes.standard.Cylinder({
+            position: { x: 700, y: 860 },
+            size: { width: 80, height: 60 },
+            attrs: {
+                body: { fill: '#7e57c2', stroke: '#6a1b9a', strokeWidth: 2 },
+                top: { fill: '#9575cd' }
+            }
+        });
+        databaseIcon.addTo(graph);
+
+        // 7. Testing Frameworks (Orange)
+        const testingBg = createToolGroupBg(900, 740, 240, 200, '#ffe0d0');
+        testingBg.addTo(graph);
+
+        const testingHeader = createToolHeader(930, 755, 180, 'Testing\nFrameworks', '#ff9800');
+        testingHeader.addTo(graph);
+
+        const cucumberBubble = createToolBubble(930, 840, 70, 'Cucumber');
+        cucumberBubble.addTo(graph);
+
+        const seleniumBubble = createToolBubble(1030, 840, 70, 'Selenium');
+        seleniumBubble.addTo(graph);
+
+        const junitBubble = createToolBubble(980, 900, 70, 'JUnit');
+        junitBubble.addTo(graph);
+
+        // Add all elements to graph
+        graph.getCells().forEach(cell => {
+            if (cell.isElement()) {
+                cell.attr('body/filter', {
+                    name: 'dropShadow',
+                    args: { dx: 0, dy: 2, blur: 4, color: 'rgba(0,0,0,0.15)' }
+                });
+            }
+        });
+
+        // Zoom and Pan controls
+        let scale = 1;
+        paper.on('blank:mousewheel', function(evt, x, y, delta) {
+            evt.preventDefault();
+            const oldScale = scale;
+            scale = Math.min(2, Math.max(0.5, scale + delta * 0.1));
+            
+            paper.scale(scale, scale);
+        });
+
+        document.getElementById('btn-reset-zoom').addEventListener('click', function() {
+            scale = 1;
+            paper.scale(1, 1);
+            paper.translate(0, 0);
+        });
+
+        document.getElementById('btn-export-svg').addEventListener('click', function() {
+            paper.toSVG(function(svg) {
+                const blob = new Blob([svg], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cicd-pipeline-diagram.svg';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        });
+
+        // Center the diagram
+        paper.translate(20, 0);
+    </script>
+</body>
+</html>
