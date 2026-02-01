@@ -10,7 +10,9 @@
 4. [Kill Switch 제어 센터](#4-kill-switch-제어-센터)
 5. [Rollout 전략 에디터](#5-rollout-전략-에디터)
 6. [Analytics & Monitoring 대시보드](#6-analytics--monitoring-대시보드)
-7. [End-to-End 시스템 시뮬레이터](#7-end-to-end-시스템-시뮬레이터) ⭐ **NEW**
+7. [End-to-End 시스템 시뮬레이터](#7-end-to-end-시스템-시뮬레이터)
+8. [시스템 연동 맵](#8-시스템-연동-맵)
+9. [Physical Deployment Viewer](#9-physical-deployment-viewer) ⭐ **NEW**
 
 ---
 
@@ -240,6 +242,153 @@ Admin → Sticky Session 설정 → 3개 그룹 할당 (33/33/34%)
 - 실패 시나리오 시뮬레이션
 
 **상세 문서**: [END_TO_END_SIMULATOR.md](./END_TO_END_SIMULATOR.md)
+
+---
+
+## 8. 시스템 연동 맵
+
+**파일명**: `08-system-integration-map.html`
+
+### 목적
+FleetFlag 시스템과 외부 시스템 간의 **연동 관계**를 네트워크 그래프로 시각화하여, 시스템 간 의존성, API 엔드포인트, 데이터 흐름을 한눈에 확인합니다.
+
+### 주요 기능
+- **D3.js Force-Directed Graph**: 11개 시스템 노드 + 연결선 시각화
+- **실시간 헬스체크**: 각 시스템 상태 (🟢 정상 / 🟡 경고 / 🔴 장애)
+- **Detail Panel**: 클릭 시 API 엔드포인트, 연동 스펙, 데이터 샘플 표시
+- **의존성 강도**: 선 굵기로 강한/중간/약한 의존성 구분
+
+**상세 문서**: [SYSTEM_INTEGRATION_MAP_PROPOSAL.md](./SYSTEM_INTEGRATION_MAP_PROPOSAL.md)
+
+---
+
+## 9. Physical Deployment Viewer ⭐
+
+**파일명**: `09-physical-deployment-viewer.html`
+
+### 목적
+FleetFlag 시스템의 **물리적 배포 구성**을 시각화하여, 온프렘 IDC 랙 구성, 차량 내부 ECU 배치, 네트워크 토폴로지를 입체적으로 확인합니다.
+
+### 주요 기능
+- **4개 탭 뷰**:
+  1. **Data Center (IDC)**: 3개 랙 (Frontend/Backend/Data) 서버 배치도
+  2. **Vehicle Architecture**: 차량 내부 HPC → CCU → ECU 계층 구조
+  3. **Network Topology**: IDC ↔ Vehicle 네트워크 흐름도
+  4. **3D Rack Viewer**: Three.js 기반 3D 랙 시각화
+
+- **실시간 하드웨어 모니터링**:
+  - CPU/RAM/Storage 사용률
+  - 네트워크 처리량
+  - 전력 소비량
+  - 헬스 상태 (🟢 정상 / 🟡 경고 / 🔴 장애)
+
+- **서버 상세 정보**:
+  - 하드웨어 스펙 (CPU 모델, 코어 수, RAM, 스토리지)
+  - 실시간 메트릭 (CPU 사용률, 디스크 I/O, 네트워크 처리량)
+  - 가동 시간 (Uptime)
+
+- **차량 컴포넌트 상세**:
+  - HPC/CCU/ADAS/Cluster/TCU ECU 스펙
+  - Feature Flag 적용 상태
+  - 실시간 메트릭 (CPU, RAM, 캐시 적중률)
+
+- **네트워크 토폴로지**:
+  - Azure Front Door → IDC Firewall → DMZ/App/Data Zone
+  - 차량 CCU (LTE/5G) → VPN 터널
+  - 암호화 프로토콜 (TLS 1.3, VPN IPsec)
+
+- **3D Rack Viewer (Three.js)**:
+  - 3개 랙 3D 시각화 (Frontend/Backend/Data)
+  - 각 랙당 4대 서버 배치
+  - LED 인디케이터 (녹색 점멸)
+  - 마우스 드래그 회전, 휠 확대/축소
+
+### 핵심 화면 요소
+
+#### Tab 1: Data Center (IDC)
+- **3개 랙 구성**:
+  - Rack 1 (Frontend): Load Balancer (2), API Gateway (2)
+  - Rack 2 (Backend): FleetFlag API (2), Flipt Engine (2)
+  - Rack 3 (Data): PostgreSQL (2), Redis Cluster (1), ClickHouse (1)
+
+- **서버 카드**:
+  - 상단: 서버 이름, 헬스 인디케이터
+  - 중간: CPU/RAM 배지, 사용률 텍스트
+  - 하단: 전력 소비량 바 (색상 그라데이션)
+
+- **서버 상세 패널** (클릭 시):
+  - 하드웨어 스펙 (CPU 모델, 코어, RAM, 스토리지, 네트워크, 전력)
+  - 실시간 상태 (CPU/RAM 사용률, Disk I/O, 네트워크 처리량, Uptime)
+
+#### Tab 2: Vehicle Architecture
+- **차량 다이어그램** (Genesis GV80):
+  - HPC (최상단)
+  - ↓ Ethernet 100Mbps
+  - CCU (중단)
+  - ↓ CAN Bus 500kbps
+  - ADAS ECU / Cluster ECU / TCU ECU (하단)
+
+- **컴포넌트 상세** (클릭 시):
+  - HPC: Tegra Xavier, 32GB RAM, Kubernetes, FleetFlag Agent
+  - CCU: i.MX 8 QuadMax, 8GB RAM, LTE/5G Modem, VPN Client
+  - ECU: 각 ECU별 프로세서, RAM, 기능, Feature Flag 상태
+
+#### Tab 3: Network Topology
+- **네트워크 노드 맵**:
+  - Internet Cloud → Azure Front Door → IDC Firewall
+  - ↓ DMZ Zone (Load Balancer, API Gateway)
+  - ↓ App Zone (FleetFlag API, Flipt)
+  - ↓ Data Zone (PostgreSQL, Redis, ClickHouse)
+  - ↓ Vehicle CCU (LTE/5G + VPN)
+
+- **연결 라벨**:
+  - HTTPS/WSS, VPN IPsec, TLS 1.3, LTE/5G + VPN
+
+- **네트워크 통계**:
+  - Total Throughput: 2.3 Gbps
+  - Avg Latency: 8.2 ms
+  - Active Connections: 125,847
+  - Uptime: 99.98%
+
+#### Tab 4: 3D Rack Viewer
+- **Three.js 3D Scene**:
+  - 3개 랙 (Rack 1/2/3) 3D 박스
+  - 각 랙당 4개 서버 (색상: 파란색/보라색/녹색)
+  - LED 인디케이터 (녹색 구체, Pulsing 애니메이션)
+  - 랙 상단 라벨 (텍스트 스프라이트)
+
+- **컨트롤**:
+  - Rotate Left / Rotate Right 버튼
+  - Reset View 버튼
+  - OrbitControls (마우스 드래그, 휠 확대/축소)
+
+### 기술 스택
+- **Three.js 0.160.0**: 3D 렌더링
+- **OrbitControls**: 3D 카메라 제어
+- **Tailwind CSS**: 스타일링
+- **Font Awesome**: 아이콘
+- **Vanilla JavaScript**: 인터랙션
+
+### 데이터베이스
+- **서버 스펙 DB**: 12대 서버 상세 정보 (CPU, RAM, Storage, Network, Power)
+- **차량 컴포넌트 DB**: HPC, CCU, ADAS, Cluster, TCU 스펙
+- **네트워크 노드 DB**: Azure, Firewall, DMZ, App, Data Zone, Vehicle CCU
+
+### 활용 사례
+- **IDC 용량 계획**: 서버 리소스 사용률 모니터링
+- **장애 대응**: 실시간 헬스체크로 장애 서버 즉시 파악
+- **차량 아키텍처 교육**: 신규 개발자 온보딩 자료
+- **네트워크 최적화**: 병목 구간 식별 및 대역폭 증설 계획
+- **Stakeholder 데모**: CTO/인프라팀에게 물리적 구성 시연
+
+### 확장 가능성
+- 실시간 메트릭 업데이트 (Prometheus/Grafana 연동)
+- 서버 추가/제거 시뮬레이션
+- 전력 소비량 예측 (Phase별)
+- 차량 대수 증가 시뮬레이션 (10,000 → 100,000대)
+- 네트워크 트래픽 애니메이션 (데이터 패킷 흐름)
+
+**관련 문서**: [Physical Deployment Architecture](../02-architecture/physical-deployment.md)
 
 ---
 

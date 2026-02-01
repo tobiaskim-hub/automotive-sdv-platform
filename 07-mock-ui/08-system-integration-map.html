@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - System Integration Architecture Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .node:hover {
+            filter: brightness(1.2);
+        }
+        .node.selected {
+            stroke: #10b981;
+            stroke-width: 4px;
+        }
+        .link {
+            stroke: #6b7280;
+            stroke-width: 2;
+            fill: none;
+        }
+        .link.active {
+            stroke: #10b981;
+            stroke-width: 3;
+            animation: dash 2s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+        .data-flow-particle {
+            fill: #10b981;
+            animation: flow 3s linear infinite;
+        }
+        @keyframes flow {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .health-indicator {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .layer-card {
+            transition: all 0.3s ease;
+        }
+        .layer-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-[#002c5f] text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-network-wired text-2xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">FleetFlag System Integration Architecture Map</h1>
+                        <p class="text-sm text-blue-200">현대자동차 Feature Flag 시스템 연동 아키텍처 - Logical & Physical View</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-xs text-blue-200">시스템 상태</div>
+                        <div class="text-green-400 font-bold">● 10/11 정상</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- View Toggle -->
+    <div class="container mx-auto px-6 py-6">
+        <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <label class="font-bold text-gray-700">
+                        <i class="fas fa-eye mr-2"></i>뷰 선택:
+                    </label>
+                    <div class="flex space-x-2">
+                        <button id="logicalViewBtn" class="view-btn px-4 py-2 rounded-lg bg-blue-600 text-white font-bold">
+                            <i class="fas fa-sitemap mr-2"></i>논리 뷰 (Logical)
+                        </button>
+                        <button id="physicalViewBtn" class="view-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold">
+                            <i class="fas fa-server mr-2"></i>물리 뷰 (Physical)
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="simulateFlowBtn" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+                        <i class="fas fa-play mr-2"></i>데이터 흐름 시뮬레이션
+                    </button>
+                    <button id="resetBtn" class="px-4 py-2 rounded-lg bg-gray-600 text-white hover:bg-gray-700">
+                        <i class="fas fa-redo mr-2"></i>초기화
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left: Architecture Diagram -->
+            <div class="col-span-2 bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-project-diagram mr-2 text-blue-600"></i>
+                    <span id="viewTitle">시스템 연동 구조 (Logical View)</span>
+                </h2>
+                
+                <!-- Logical View (D3.js Network Graph) -->
+                <div id="logicalView" class="relative bg-gray-50 rounded-lg" style="height: 700px; display: block;">
+                    <svg id="networkGraph" width="100%" height="700"></svg>
+                </div>
+
+                <!-- Physical View (Layer Architecture) -->
+                <div id="physicalView" class="relative bg-gray-50 rounded-lg p-6" style="height: 700px; display: none; overflow-y: auto;">
+                    <!-- Layer 1: External Systems -->
+                    <div class="layer-card bg-purple-50 border-2 border-purple-300 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-purple-900">
+                                <i class="fas fa-building mr-2"></i>Layer 1: 외부 연동 시스템
+                            </h3>
+                            <span class="text-sm text-purple-700">현대차 내부 Legacy 시스템</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="physical-node bg-white p-3 rounded border-2 border-purple-200 cursor-pointer hover:border-purple-500" data-system="codebeamer">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-clipboard-list text-purple-600"></i>
+                                    <span class="font-bold text-sm">CodeBeamer</span>
+                                </div>
+                                <div class="text-xs text-gray-600">요구사항 관리 (ALM)</div>
+                                <div class="text-xs text-green-600 mt-1">● 정상 (12ms)</div>
+                            </div>
+                            <div class="physical-node bg-white p-3 rounded border-2 border-purple-200 cursor-pointer hover:border-purple-500" data-system="plm">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-cube text-purple-600"></i>
+                                    <span class="font-bold text-sm">PLM System</span>
+                                </div>
+                                <div class="text-xs text-gray-600">BOM 데이터 관리</div>
+                                <div class="text-xs text-green-600 mt-1">● 정상 (45ms)</div>
+                            </div>
+                            <div class="physical-node bg-white p-3 rounded border-2 border-purple-200 cursor-pointer hover:border-purple-500" data-system="sums">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-download text-purple-600"></i>
+                                    <span class="font-bold text-sm">SUMS</span>
+                                </div>
+                                <div class="text-xs text-gray-600">OTA 업데이트 관리</div>
+                                <div class="text-xs text-green-600 mt-1">● 정상 (23ms)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 2: Azure Cloud Infrastructure -->
+                    <div class="layer-card bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-blue-900">
+                                <i class="fas fa-cloud mr-2"></i>Layer 2: Azure Cloud Infrastructure
+                            </h3>
+                            <span class="text-sm text-blue-700">Korea Central Region</span>
+                        </div>
+                        
+                        <!-- Azure Front Door + WAF -->
+                        <div class="bg-blue-100 border-2 border-blue-200 rounded-lg p-3 mb-3">
+                            <div class="font-bold text-sm text-blue-900 mb-2">
+                                <i class="fas fa-shield-alt mr-2"></i>Security Layer
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="azure-frontdoor">
+                                    <div class="text-xs font-bold">Azure Front Door</div>
+                                    <div class="text-xs text-gray-600">CDN + DDoS Protection</div>
+                                </div>
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="azure-waf">
+                                    <div class="text-xs font-bold">Web Application Firewall</div>
+                                    <div class="text-xs text-gray-600">SQL Injection 방어</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Azure Kubernetes Service -->
+                        <div class="bg-blue-100 border-2 border-blue-200 rounded-lg p-3 mb-3">
+                            <div class="font-bold text-sm text-blue-900 mb-2">
+                                <i class="fas fa-dharmachakra mr-2"></i>Kubernetes Cluster (AKS)
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="fleetflag-api">
+                                    <div class="text-xs font-bold">FleetFlag API</div>
+                                    <div class="text-xs text-gray-600">Rust/Axum (3 Pods)</div>
+                                    <div class="text-xs text-green-600 mt-1">● HPA 활성</div>
+                                </div>
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="flipt">
+                                    <div class="text-xs font-bold">Flipt Engine</div>
+                                    <div class="text-xs text-gray-600">Go (2 Pods)</div>
+                                    <div class="text-xs text-green-600 mt-1">● 정상</div>
+                                </div>
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="admin-dashboard">
+                                    <div class="text-xs font-bold">Admin Dashboard</div>
+                                    <div class="text-xs text-gray-600">React (NGINX)</div>
+                                    <div class="text-xs text-green-600 mt-1">● 정상</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Database Layer -->
+                        <div class="bg-blue-100 border-2 border-blue-200 rounded-lg p-3">
+                            <div class="font-bold text-sm text-blue-900 mb-2">
+                                <i class="fas fa-database mr-2"></i>Data Layer
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="postgresql">
+                                    <div class="text-xs font-bold">PostgreSQL</div>
+                                    <div class="text-xs text-gray-600">Primary + Replica</div>
+                                    <div class="text-xs text-green-600 mt-1">● 정상 (8ms)</div>
+                                </div>
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="redis">
+                                    <div class="text-xs font-bold">Redis Cluster</div>
+                                    <div class="text-xs text-gray-600">Sentinel HA (3 nodes)</div>
+                                    <div class="text-xs text-green-600 mt-1">● 정상 (1ms)</div>
+                                </div>
+                                <div class="physical-node bg-white p-2 rounded border border-blue-200 cursor-pointer hover:border-blue-500" data-system="clickhouse">
+                                    <div class="text-xs font-bold">ClickHouse</div>
+                                    <div class="text-xs text-gray-600">Analytics DB (Sharded)</div>
+                                    <div class="text-xs text-green-600 mt-1">● 정상 (15ms)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 3: Vehicle Network -->
+                    <div class="layer-card bg-teal-50 border-2 border-teal-300 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-teal-900">
+                                <i class="fas fa-car mr-2"></i>Layer 3: Vehicle Fleet Network
+                            </h3>
+                            <span class="text-sm text-teal-700">125,000대 차량 (VPN 연결)</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="physical-node bg-white p-3 rounded border-2 border-teal-200 cursor-pointer hover:border-teal-500" data-system="vehicle-agent">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-microchip text-teal-600"></i>
+                                    <span class="font-bold text-sm">Vehicle Agent</span>
+                                </div>
+                                <div class="text-xs text-gray-600">Rust + SQLite (64MB)</div>
+                                <div class="text-xs text-gray-600">Delta Sync (5분 주기)</div>
+                                <div class="text-xs text-green-600 mt-1">● 12,800대 온라인</div>
+                            </div>
+                            <div class="physical-node bg-white p-3 rounded border-2 border-teal-200 cursor-pointer hover:border-teal-500" data-system="sdk">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-code text-teal-600"></i>
+                                    <span class="font-bold text-sm">SDK Library</span>
+                                </div>
+                                <div class="text-xs text-gray-600">C++/Python/Rust</div>
+                                <div class="text-xs text-gray-600">평가 지연: 2.1ms</div>
+                                <div class="text-xs text-green-600 mt-1">● 캐시 적중 98%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 4: Monitoring & Notification -->
+                    <div class="layer-card bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-orange-900">
+                                <i class="fas fa-chart-line mr-2"></i>Layer 4: Observability & Notification
+                            </h3>
+                            <span class="text-sm text-orange-700">모니터링 및 알림 시스템</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="physical-node bg-white p-3 rounded border-2 border-orange-200 cursor-pointer hover:border-orange-500" data-system="grafana">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-chart-bar text-orange-600"></i>
+                                    <span class="font-bold text-sm">Grafana</span>
+                                </div>
+                                <div class="text-xs text-gray-600">실시간 대시보드</div>
+                                <div class="text-xs text-green-600 mt-1">● 정상</div>
+                            </div>
+                            <div class="physical-node bg-white p-3 rounded border-2 border-orange-200 cursor-pointer hover:border-orange-500" data-system="prometheus">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fas fa-fire text-orange-600"></i>
+                                    <span class="font-bold text-sm">Prometheus</span>
+                                </div>
+                                <div class="text-xs text-gray-600">메트릭 수집 (15s)</div>
+                                <div class="text-xs text-green-600 mt-1">● 정상</div>
+                            </div>
+                            <div class="physical-node bg-white p-3 rounded border-2 border-orange-200 cursor-pointer hover:border-orange-500" data-system="slack">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <i class="fab fa-slack text-orange-600"></i>
+                                    <span class="font-bold text-sm">Slack</span>
+                                </div>
+                                <div class="text-xs text-gray-600">알림 & 협업</div>
+                                <div class="text-xs text-red-600 mt-1">● 점검 중</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Detail Panel -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-info-circle mr-2 text-purple-600"></i>시스템 상세 정보
+                </h2>
+                
+                <div id="detailPanel" class="space-y-4">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-hand-pointer text-4xl mb-3"></i>
+                        <p>노드를 클릭하면<br>상세 정보가 표시됩니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Flow Legend -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-info-circle mr-2 text-blue-600"></i>범례 및 프로토콜
+            </h2>
+            <div class="grid grid-cols-4 gap-6">
+                <div>
+                    <h3 class="font-bold text-sm text-gray-700 mb-2">연결 타입</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <svg width="40" height="2"><line x1="0" y1="1" x2="40" y2="1" stroke="#6b7280" stroke-width="2"/></svg>
+                            <span>동기식 (REST/gRPC)</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <svg width="40" height="2"><line x1="0" y1="1" x2="40" y2="1" stroke="#6b7280" stroke-width="2" stroke-dasharray="5,5"/></svg>
+                            <span>비동기식 (Webhook)</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-gray-700 mb-2">상태 표시</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            <span>정상 (응답 &lt; 100ms)</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                            <span>지연 (응답 &gt; 100ms)</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                            <span>장애 (응답 없음)</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-gray-700 mb-2">인증 방식</h3>
+                    <div class="space-y-2 text-sm">
+                        <div>• OAuth 2.0 (CodeBeamer)</div>
+                        <div>• API Key (PLM)</div>
+                        <div>• mTLS (Vehicle)</div>
+                        <div>• JWT (Admin API)</div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-gray-700 mb-2">데이터 포맷</h3>
+                    <div class="space-y-2 text-sm">
+                        <div>• JSON (REST API)</div>
+                        <div>• Protobuf (gRPC)</div>
+                        <div>• XML (PLM Legacy)</div>
+                        <div>• TSV (ClickHouse)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // System data
+        const systems = {
+            fleetflag: {
+                id: 'fleetflag',
+                name: 'FleetFlag',
+                category: 'core',
+                role: 'Feature Flag Management Platform',
+                protocol: 'REST API, gRPC, WebSocket',
+                auth: 'JWT, API Key, mTLS',
+                status: 'healthy',
+                latency: 12,
+                color: '#3b82f6',
+                endpoints: [
+                    'GET /api/v1/flags',
+                    'POST /api/v1/flags',
+                    'POST /api/v1/evaluate',
+                    'POST /api/v1/flags/{id}/kill-switch'
+                ],
+                description: 'FleetFlag 시스템의 중심 컴포넌트. 모든 Feature Flag 관리 및 평가 로직 담당.'
+            },
+            codebeamer: {
+                id: 'codebeamer',
+                name: 'CodeBeamer',
+                category: 'external',
+                role: '요구사항 관리 (ALM)',
+                protocol: 'REST API, Webhook',
+                auth: 'OAuth 2.0',
+                status: 'healthy',
+                latency: 12,
+                color: '#8b5cf6',
+                endpoints: [
+                    'GET /api/v1/requirements/{id}',
+                    'POST /api/v1/requirements/{id}/flags'
+                ],
+                dataFlow: 'CodeBeamer → FleetFlag: 요구사항 생성/변경 이벤트 (Webhook)\nFleetFlag → CodeBeamer: Flag 상태 업데이트',
+                description: '요구사항과 Feature Flag 간 추적성(Traceability) 관리. ASIL 등급 검증.'
+            },
+            plm: {
+                id: 'plm',
+                name: 'PLM System',
+                category: 'external',
+                role: 'BOM 데이터 관리',
+                protocol: 'REST API, FTP (Batch)',
+                auth: 'API Key + IP Whitelisting',
+                status: 'healthy',
+                latency: 45,
+                color: '#8b5cf6',
+                endpoints: [
+                    'GET /api/v1/vehicles/{vin}/bom',
+                    'POST /api/v1/bom/sync'
+                ],
+                dataFlow: 'PLM → FleetFlag: BOM 데이터 동기화 (매일 02:00)\nFleetFlag → PLM: 차량별 BOM 조회',
+                description: '차량별 하드웨어 부품(BOM) 정보 제공. Feature Flag 배포 전 호환성 검증.'
+            },
+            sums: {
+                id: 'sums',
+                name: 'SUMS (OTA)',
+                category: 'external',
+                role: 'OTA 업데이트 관리',
+                protocol: 'REST API, Webhook',
+                auth: 'mTLS',
+                status: 'healthy',
+                latency: 23,
+                color: '#8b5cf6',
+                endpoints: [
+                    'POST /api/v1/ota/deploy',
+                    'GET /api/v1/vehicles/{vin}/sw-version'
+                ],
+                dataFlow: 'FleetFlag → SUMS: Flag 변경 이벤트\nSUMS → FleetFlag: OTA 상태 알림',
+                description: 'Feature Flag 변경을 OTA 패키지로 배포. SW 버전 관리.'
+            },
+            postgresql: {
+                id: 'postgresql',
+                name: 'PostgreSQL',
+                category: 'database',
+                role: '메타데이터 저장',
+                protocol: 'PostgreSQL Protocol',
+                auth: 'User/Password',
+                status: 'healthy',
+                latency: 8,
+                color: '#10b981',
+                description: 'Feature Flag 메타데이터, 사용자 정보, 감사 로그 저장. Primary + Replica 구성.'
+            },
+            redis: {
+                id: 'redis',
+                name: 'Redis Cluster',
+                category: 'database',
+                role: '캐시 + Pub/Sub',
+                protocol: 'Redis Protocol',
+                auth: 'Password',
+                status: 'healthy',
+                latency: 1,
+                color: '#10b981',
+                description: 'Flag 평가 결과 캐시 (5분 TTL). Kill Switch용 Pub/Sub. Sentinel HA 구성.'
+            },
+            clickhouse: {
+                id: 'clickhouse',
+                name: 'ClickHouse',
+                category: 'database',
+                role: 'Analytics DB',
+                protocol: 'Native TCP',
+                auth: 'User/Password',
+                status: 'healthy',
+                latency: 15,
+                color: '#10b981',
+                description: '평가 이벤트 (2.8억 건/월) 실시간 분석. A/B 테스트 통계 처리.'
+            },
+            vehicle: {
+                id: 'vehicle',
+                name: 'Vehicle Fleet',
+                category: 'vehicle',
+                role: '125,000대 차량',
+                protocol: 'gRPC, WebSocket',
+                auth: 'mTLS (VIN 인증서)',
+                status: 'healthy',
+                latency: 143,
+                color: '#14b8a6',
+                description: 'Rust Vehicle Agent + SQLite 로컬 캐시. Delta Sync (5분 주기). 오프라인 모드 지원.'
+            },
+            grafana: {
+                id: 'grafana',
+                name: 'Grafana',
+                category: 'monitoring',
+                role: '모니터링 대시보드',
+                protocol: 'HTTP',
+                auth: 'Bearer Token',
+                status: 'healthy',
+                latency: 20,
+                color: '#f59e0b',
+                description: '실시간 KPI 대시보드. Prometheus + ClickHouse 데이터 시각화.'
+            },
+            prometheus: {
+                id: 'prometheus',
+                name: 'Prometheus',
+                category: 'monitoring',
+                role: '메트릭 수집',
+                protocol: 'HTTP (Pull)',
+                auth: 'None',
+                status: 'healthy',
+                latency: 15,
+                color: '#f59e0b',
+                description: '/metrics 엔드포인트 스크래핑 (15초 주기). 시계열 데이터 저장.'
+            },
+            slack: {
+                id: 'slack',
+                name: 'Slack',
+                category: 'monitoring',
+                role: '알림 & 협업',
+                protocol: 'Webhook',
+                auth: 'Secret Token',
+                status: 'degraded',
+                latency: null,
+                color: '#f59e0b',
+                description: 'Kill Switch, 배포, 오류 알림. #safety-critical, #feature-flags 채널.'
+            }
+        };
+
+        const links = [
+            { source: 'fleetflag', target: 'codebeamer', type: 'sync', label: 'REST API' },
+            { source: 'fleetflag', target: 'plm', type: 'sync', label: 'REST + FTP' },
+            { source: 'fleetflag', target: 'sums', type: 'sync', label: 'REST API' },
+            { source: 'fleetflag', target: 'postgresql', type: 'sync', label: 'SQL' },
+            { source: 'fleetflag', target: 'redis', type: 'sync', label: 'Redis' },
+            { source: 'fleetflag', target: 'clickhouse', type: 'async', label: 'Batch' },
+            { source: 'fleetflag', target: 'vehicle', type: 'sync', label: 'gRPC + WS' },
+            { source: 'fleetflag', target: 'slack', type: 'async', label: 'Webhook' },
+            { source: 'prometheus', target: 'fleetflag', type: 'sync', label: 'Scrape' },
+            { source: 'grafana', target: 'prometheus', type: 'sync', label: 'PromQL' },
+            { source: 'grafana', target: 'clickhouse', type: 'sync', label: 'SQL' }
+        ];
+
+        // View state
+        let currentView = 'logical';
+        let selectedNode = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initLogicalView();
+            initEventListeners();
+        });
+
+        function initEventListeners() {
+            document.getElementById('logicalViewBtn').addEventListener('click', () => switchView('logical'));
+            document.getElementById('physicalViewBtn').addEventListener('click', () => switchView('physical'));
+            document.getElementById('simulateFlowBtn').addEventListener('click', simulateDataFlow);
+            document.getElementById('resetBtn').addEventListener('click', resetView);
+
+            // Physical view node clicks
+            document.querySelectorAll('.physical-node').forEach(node => {
+                node.addEventListener('click', (e) => {
+                    const systemId = e.currentTarget.dataset.system;
+                    showSystemDetail(systemId);
+                });
+            });
+        }
+
+        function switchView(view) {
+            currentView = view;
+            
+            if (view === 'logical') {
+                document.getElementById('logicalView').style.display = 'block';
+                document.getElementById('physicalView').style.display = 'none';
+                document.getElementById('viewTitle').textContent = '시스템 연동 구조 (Logical View)';
+                document.getElementById('logicalViewBtn').className = 'view-btn px-4 py-2 rounded-lg bg-blue-600 text-white font-bold';
+                document.getElementById('physicalViewBtn').className = 'view-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold';
+            } else {
+                document.getElementById('logicalView').style.display = 'none';
+                document.getElementById('physicalView').style.display = 'block';
+                document.getElementById('viewTitle').textContent = '시스템 배포 구조 (Physical View)';
+                document.getElementById('logicalViewBtn').className = 'view-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-bold';
+                document.getElementById('physicalViewBtn').className = 'view-btn px-4 py-2 rounded-lg bg-blue-600 text-white font-bold';
+            }
+        }
+
+        function initLogicalView() {
+            const svg = d3.select('#networkGraph');
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 700;
+
+            svg.attr('viewBox', [0, 0, width, height]);
+
+            // Create force simulation
+            const simulation = d3.forceSimulation(Object.values(systems))
+                .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+                .force('charge', d3.forceManyBody().strength(-500))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(60));
+
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(links)
+                .join('line')
+                .attr('class', d => `link ${d.type}`)
+                .attr('stroke-dasharray', d => d.type === 'async' ? '5,5' : '0');
+
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('g')
+                .data(Object.values(systems))
+                .join('g')
+                .attr('class', 'node')
+                .call(drag(simulation))
+                .on('click', (event, d) => {
+                    event.stopPropagation();
+                    selectNode(d);
+                });
+
+            // Add circles
+            node.append('circle')
+                .attr('r', d => d.id === 'fleetflag' ? 50 : 35)
+                .attr('fill', d => d.color)
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+
+            // Add health indicators
+            node.append('circle')
+                .attr('r', 6)
+                .attr('cx', 25)
+                .attr('cy', -25)
+                .attr('fill', d => d.status === 'healthy' ? '#10b981' : d.status === 'degraded' ? '#f59e0b' : '#ef4444')
+                .attr('class', 'health-indicator');
+
+            // Add icons
+            node.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', 5)
+                .attr('fill', '#fff')
+                .attr('font-size', d => d.id === 'fleetflag' ? '24px' : '16px')
+                .attr('font-family', 'Font Awesome 6 Free')
+                .attr('font-weight', '900')
+                .text(d => getIcon(d.category));
+
+            // Add labels
+            node.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => d.id === 'fleetflag' ? 65 : 50)
+                .attr('fill', '#1f2937')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .text(d => d.name);
+
+            // Update positions
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            // Store for later use
+            window.networkSim = { simulation, svg, node, link };
+        }
+
+        function getIcon(category) {
+            const icons = {
+                core: '\uf0e8',      // flag
+                external: '\uf1ad',  // building
+                database: '\uf1c0',  // database
+                vehicle: '\uf1b9',   // car
+                monitoring: '\uf201' // chart-line
+            };
+            return icons[category] || '\uf013';
+        }
+
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+
+            return d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended);
+        }
+
+        function selectNode(nodeData) {
+            selectedNode = nodeData;
+            
+            // Update node styles
+            d3.selectAll('.node circle')
+                .classed('selected', false)
+                .attr('stroke-width', 2);
+            
+            d3.selectAll('.node')
+                .filter(d => d.id === nodeData.id)
+                .select('circle')
+                .classed('selected', true)
+                .attr('stroke-width', 4);
+
+            showSystemDetail(nodeData.id);
+        }
+
+        function showSystemDetail(systemId) {
+            const system = systems[systemId];
+            if (!system) return;
+
+            const statusColor = system.status === 'healthy' ? 'green' : system.status === 'degraded' ? 'yellow' : 'red';
+            const statusText = system.status === 'healthy' ? '정상' : system.status === 'degraded' ? '지연' : '장애';
+
+            let html = `
+                <div class="border-l-4 border-${statusColor}-500 pl-4 mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">${system.name}</h3>
+                    <div class="text-sm text-gray-600">${system.role}</div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <div class="text-xs font-bold text-gray-700 mb-1">상태</div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-${statusColor}-500"></span>
+                            <span class="text-sm">${statusText}</span>
+                            ${system.latency ? `<span class="text-xs text-gray-500">(${system.latency}ms)</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-bold text-gray-700 mb-1">프로토콜</div>
+                        <div class="text-sm text-gray-600">${system.protocol}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-bold text-gray-700 mb-1">인증 방식</div>
+                        <div class="text-sm text-gray-600">${system.auth}</div>
+                    </div>
+
+                    ${system.endpoints ? `
+                        <div>
+                            <div class="text-xs font-bold text-gray-700 mb-1">주요 엔드포인트</div>
+                            <div class="bg-gray-50 rounded p-2 text-xs font-mono space-y-1">
+                                ${system.endpoints.map(ep => `<div>${ep}</div>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${system.dataFlow ? `
+                        <div>
+                            <div class="text-xs font-bold text-gray-700 mb-1">데이터 흐름</div>
+                            <div class="text-xs text-gray-600 whitespace-pre-line">${system.dataFlow}</div>
+                        </div>
+                    ` : ''}
+
+                    <div>
+                        <div class="text-xs font-bold text-gray-700 mb-1">설명</div>
+                        <div class="text-sm text-gray-600">${system.description}</div>
+                    </div>
+
+                    <div class="flex space-x-2 pt-3 border-t">
+                        <button class="flex-1 bg-blue-600 text-white text-xs py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-vial mr-1"></i>연동 테스트
+                        </button>
+                        <button class="flex-1 bg-gray-600 text-white text-xs py-2 rounded hover:bg-gray-700">
+                            <i class="fas fa-book mr-1"></i>문서 보기
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('detailPanel').innerHTML = html;
+        }
+
+        function simulateDataFlow() {
+            alert('데이터 흐름 시뮬레이션을 시작합니다.\n\nFeature 생성 → 검증 → 저장 → 캐시 → 차량 동기화 → 평가 → 분석\n\n(실제 구현 시 애니메이션으로 표시)');
+        }
+
+        function resetView() {
+            selectedNode = null;
+            d3.selectAll('.node circle').classed('selected', false).attr('stroke-width', 2);
+            document.getElementById('detailPanel').innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-hand-pointer text-4xl mb-3"></i>
+                    <p>노드를 클릭하면<br>상세 정보가 표시됩니다</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
