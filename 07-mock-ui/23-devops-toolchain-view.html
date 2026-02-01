@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - DevOps Toolchain Management</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <style>
+        :root {
+            /* Brand Colors */
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #dc2626;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+            
+            /* DevOps Stage Colors */
+            --plan-color: #7e57c2;
+            --code-color: #26a69a;
+            --build-color: #42a5f5;
+            --test-color: #66bb6a;
+            --release-color: #ffa726;
+            --deploy-color: #ef5350;
+            --operate-color: #ab47bc;
+            --monitor-color: #29b6f6;
+            
+            /* Status Colors */
+            --status-active: #10b981;
+            --status-warning: #f59e0b;
+            --status-error: #dc2626;
+            --status-inactive: #6b7280;
+            --status-progress: #3b82f6;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+        
+        /* Glass-morphism */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Tab Styles */
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            background: rgba(30, 41, 59, 0.5);
+            color: #94a3b8;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-bottom: none;
+        }
+        
+        .tab-button:hover {
+            background: rgba(30, 41, 59, 0.7);
+            color: #cbd5e1;
+        }
+        
+        .tab-button.active {
+            background: rgba(30, 41, 59, 0.9);
+            color: #00aad2;
+            border-color: rgba(0, 170, 210, 0.3);
+            box-shadow: 0 -4px 12px rgba(0, 170, 210, 0.2);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* DevOps Workflow View Styles */
+        #workflow-canvas {
+            width: 100%;
+            height: 600px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+        }
+        
+        .stage-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .stage-node:hover {
+            filter: brightness(1.2);
+        }
+        
+        .stage-circle {
+            fill: var(--primary);
+            stroke-width: 3;
+            transition: all 0.3s ease;
+        }
+        
+        .stage-label {
+            fill: white;
+            font-size: 14px;
+            font-weight: 600;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        
+        .stage-tools {
+            fill: #cbd5e1;
+            font-size: 11px;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        
+        .connection-line {
+            fill: none;
+            stroke: #475569;
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            opacity: 0.6;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+        
+        .arrow-marker {
+            fill: #475569;
+        }
+        
+        /* Toolchain Status View Styles */
+        .tool-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 170, 210, 0.3);
+            border-color: rgba(0, 170, 210, 0.5);
+        }
+        
+        .tool-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .status-error { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .status-inactive { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+        .status-progress { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Filter Styles */
+        .filter-button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-button:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(0, 170, 210, 0.5);
+            color: #00aad2;
+        }
+        
+        .filter-button.active {
+            background: rgba(0, 170, 210, 0.2);
+            border-color: #00aad2;
+            color: #00aad2;
+        }
+        
+        /* Search Box */
+        .search-box {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #cbd5e1;
+            width: 300px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #00aad2;
+            box-shadow: 0 0 0 3px rgba(0, 170, 210, 0.1);
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00aad2 0%, #0084a8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        /* Activity Log */
+        .activity-log {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 16px;
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: rgba(30, 41, 59, 0.4);
+            transition: all 0.2s ease;
+        }
+        
+        .activity-item:hover {
+            background: rgba(30, 41, 59, 0.6);
+        }
+        
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-title {
+            color: #cbd5e1;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .activity-time {
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+    </style>
+</head>
+<body class="p-8">
+    <!-- Header -->
+    <div class="glass-card rounded-2xl p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                    <i class="fas fa-infinity text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">DevOps Toolchain Management</h1>
+                    <p class="text-gray-400 text-sm mt-1">실시간 DevOps 워크플로우 및 툴체인 모니터링</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="refreshData()" class="filter-button">
+                    <i class="fas fa-sync-alt mr-2"></i>새로고침
+                </button>
+                <button onclick="exportData()" class="filter-button">
+                    <i class="fas fa-download mr-2"></i>내보내기
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Navigation -->
+    <div class="flex gap-2 mb-0">
+        <button class="tab-button active" onclick="switchTab('workflow')">
+            <i class="fas fa-infinity mr-2"></i>DevOps Workflow View
+        </button>
+        <button class="tab-button" onclick="switchTab('status')">
+            <i class="fas fa-th-large mr-2"></i>Toolchain Status View
+        </button>
+    </div>
+    
+    <!-- Tab 1: DevOps Workflow View -->
+    <div id="workflow-tab" class="tab-content active glass-card rounded-2xl rounded-tl-none p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white">
+                <i class="fas fa-project-diagram mr-2 text-cyan-500"></i>
+                DevOps 순환형 워크플로우
+            </h2>
+            
+            <div class="flex items-center gap-3">
+                <span class="text-gray-400 text-sm">시뮬레이션 속도:</span>
+                <select id="workflow-speed" onchange="updateSimulationSpeed()" class="filter-button">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="5">5x</option>
+                </select>
+                
+                <button onclick="toggleSimulation()" id="sim-toggle" class="filter-button">
+                    <i class="fas fa-pause mr-2"></i>일시정지
+                </button>
+            </div>
+        </div>
+        
+        <div id="workflow-canvas"></div>
+        
+        <!-- Workflow Stats -->
+        <div class="grid grid-cols-4 gap-4 mt-6">
+            <div class="stat-card">
+                <div class="stat-value" id="total-stages">8</div>
+                <div class="stat-label">Total Stages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="active-tools">23</div>
+                <div class="stat-label">Active Tools</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="cycle-time">2.5</div>
+                <div class="stat-label">Cycle Time (min)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="success-rate">98.5%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab 2: Toolchain Status View -->
+    <div id="status-tab" class="tab-content glass-card rounded-2xl rounded-tl-none p-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white">
+                <i class="fas fa-toolbox mr-2 text-cyan-500"></i>
+                DevOps Toolchain 현황
+            </h2>
+            
+            <div class="flex items-center gap-3">
+                <input type="text" id="tool-search" placeholder="도구 검색..." class="search-box" oninput="filterTools()">
+                
+                <div class="flex gap-2">
+                    <button class="filter-button active" data-filter="all" onclick="filterByStatus('all')">
+                        <i class="fas fa-list mr-2"></i>전체
+                    </button>
+                    <button class="filter-button" data-filter="active" onclick="filterByStatus('active')">
+                        <span class="status-dot" style="background: var(--status-active);"></span>
+                        정상
+                    </button>
+                    <button class="filter-button" data-filter="warning" onclick="filterByStatus('warning')">
+                        <span class="status-dot" style="background: var(--status-warning);"></span>
+                        경고
+                    </button>
+                    <button class="filter-button" data-filter="error" onclick="filterByStatus('error')">
+                        <span class="status-dot" style="background: var(--status-error);"></span>
+                        오류
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toolchain Grid -->
+        <div id="toolchain-grid" class="grid grid-cols-8 gap-4 mb-6">
+            <!-- Tools will be dynamically generated -->
+        </div>
+        
+        <!-- Activity Log -->
+        <div class="mt-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-history mr-2 text-cyan-500"></i>
+                실시간 활동 로그
+            </h3>
+            <div id="activity-log" class="activity-log"></div>
+        </div>
+    </div>
+    
+    <!-- Tool Detail Modal -->
+    <div id="tool-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="closeModal()">
+        <div class="glass-card rounded-2xl p-8 max-w-2xl w-full mx-4" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-white" id="modal-title"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // DevOps Toolchain Data
+        const toolchainData = {
+            stages: [
+                {
+                    id: 'plan',
+                    name: 'Plan',
+                    color: '#7e57c2',
+                    icon: 'lightbulb',
+                    tools: ['Jira', 'Trello', 'Azure Boards']
+                },
+                {
+                    id: 'code',
+                    name: 'Code',
+                    color: '#26a69a',
+                    icon: 'code',
+                    tools: ['GitHub', 'GitLab', 'Bitbucket']
+                },
+                {
+                    id: 'build',
+                    name: 'Build',
+                    color: '#42a5f5',
+                    icon: 'hammer',
+                    tools: ['Maven', 'Gradle', 'npm']
+                },
+                {
+                    id: 'test',
+                    name: 'Test',
+                    color: '#66bb6a',
+                    icon: 'vial',
+                    tools: ['JUnit', 'Selenium', 'Jest']
+                },
+                {
+                    id: 'release',
+                    name: 'Release',
+                    color: '#ffa726',
+                    icon: 'rocket',
+                    tools: ['Jenkins', 'GitLab CI', 'CircleCI']
+                },
+                {
+                    id: 'deploy',
+                    name: 'Deploy',
+                    color: '#ef5350',
+                    icon: 'server',
+                    tools: ['Kubernetes', 'Docker', 'Ansible']
+                },
+                {
+                    id: 'operate',
+                    name: 'Operate',
+                    color: '#ab47bc',
+                    icon: 'cogs',
+                    tools: ['Chef', 'Puppet', 'Terraform']
+                },
+                {
+                    id: 'monitor',
+                    name: 'Monitor',
+                    color: '#29b6f6',
+                    icon: 'chart-line',
+                    tools: ['Prometheus', 'Grafana', 'Datadog']
+                }
+            ]
+        };
+        
+        const tools = [
+            // Plan
+            { name: 'Jira', stage: 'plan', icon: 'fab fa-jira', status: 'active', color: '#0052cc' },
+            { name: 'Trello', stage: 'plan', icon: 'fab fa-trello', status: 'active', color: '#0079bf' },
+            { name: 'Azure Boards', stage: 'plan', icon: 'fab fa-microsoft', status: 'warning', color: '#0078d4' },
+            
+            // Code
+            { name: 'GitHub', stage: 'code', icon: 'fab fa-github', status: 'active', color: '#181717' },
+            { name: 'GitLab', stage: 'code', icon: 'fab fa-gitlab', status: 'active', color: '#fc6d26' },
+            { name: 'Bitbucket', stage: 'code', icon: 'fab fa-bitbucket', status: 'active', color: '#0052cc' },
+            
+            // Build
+            { name: 'Maven', stage: 'build', icon: 'fas fa-cube', status: 'active', color: '#c71a36' },
+            { name: 'Gradle', stage: 'build', icon: 'fas fa-cubes', status: 'active', color: '#02303a' },
+            { name: 'npm', stage: 'build', icon: 'fab fa-npm', status: 'progress', color: '#cb3837' },
+            
+            // Test
+            { name: 'JUnit', stage: 'test', icon: 'fas fa-flask', status: 'active', color: '#25a162' },
+            { name: 'Selenium', stage: 'test', icon: 'fas fa-robot', status: 'active', color: '#43b02a' },
+            { name: 'Jest', stage: 'test', icon: 'fas fa-vial', status: 'active', color: '#c21325' },
+            
+            // Release
+            { name: 'Jenkins', stage: 'release', icon: 'fab fa-jenkins', status: 'active', color: '#d24939' },
+            { name: 'GitLab CI', stage: 'release', icon: 'fab fa-gitlab', status: 'warning', color: '#fc6d26' },
+            { name: 'CircleCI', stage: 'release', icon: 'fas fa-circle', status: 'active', color: '#343434' },
+            { name: 'Travis CI', stage: 'release', icon: 'fas fa-check-circle', status: 'inactive', color: '#3eaaaf' },
+            
+            // Deploy
+            { name: 'Kubernetes', stage: 'deploy', icon: 'fas fa-dharmachakra', status: 'active', color: '#326ce5' },
+            { name: 'Docker', stage: 'deploy', icon: 'fab fa-docker', status: 'active', color: '#2496ed' },
+            { name: 'Ansible', stage: 'deploy', icon: 'fas fa-server', status: 'progress', color: '#ee0000' },
+            
+            // Operate
+            { name: 'Chef', stage: 'operate', icon: 'fas fa-hat-chef', status: 'active', color: '#f09820' },
+            { name: 'Puppet', stage: 'operate', icon: 'fas fa-paw', status: 'error', color: '#ffae1a' },
+            { name: 'Terraform', stage: 'operate', icon: 'fas fa-layer-group', status: 'active', color: '#5c4ee5' },
+            
+            // Monitor
+            { name: 'Prometheus', stage: 'monitor', icon: 'fas fa-fire', status: 'active', color: '#e6522c' },
+            { name: 'Grafana', stage: 'monitor', icon: 'fas fa-chart-area', status: 'active', color: '#f46800' },
+            { name: 'Datadog', stage: 'monitor', icon: 'fas fa-dog', status: 'active', color: '#632ca6' },
+            { name: 'Splunk', stage: 'monitor', icon: 'fas fa-chart-line', status: 'warning', color: '#000000' }
+        ];
+        
+        let simulationRunning = true;
+        let simulationSpeed = 1;
+        let currentFilter = 'all';
+        
+        // Tab Switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'workflow') {
+                document.querySelector('.tab-button:nth-child(1)').classList.add('active');
+                document.getElementById('workflow-tab').classList.add('active');
+                initWorkflowView();
+            } else {
+                document.querySelector('.tab-button:nth-child(2)').classList.add('active');
+                document.getElementById('status-tab').classList.add('active');
+                renderToolchainGrid();
+            }
+        }
+        
+        // Initialize Workflow View
+        function initWorkflowView() {
+            const container = document.getElementById('workflow-canvas');
+            container.innerHTML = '';
+            
+            const width = container.clientWidth;
+            const height = 600;
+            
+            const svg = d3.select('#workflow-canvas')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Define arrow marker
+            svg.append('defs').append('marker')
+                .attr('id', 'arrow')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 8)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('class', 'arrow-marker');
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radiusX = 280;
+            const radiusY = 200;
+            
+            const stages = toolchainData.stages;
+            const angleStep = (2 * Math.PI) / stages.length;
+            
+            // Calculate positions
+            stages.forEach((stage, i) => {
+                const angle = i * angleStep - Math.PI / 2;
+                stage.x = centerX + radiusX * Math.cos(angle);
+                stage.y = centerY + radiusY * Math.sin(angle);
+            });
+            
+            // Draw connections
+            const connections = svg.append('g');
+            stages.forEach((stage, i) => {
+                const nextStage = stages[(i + 1) % stages.length];
+                
+                connections.append('path')
+                    .attr('class', 'connection-line')
+                    .attr('d', `M ${stage.x} ${stage.y} L ${nextStage.x} ${nextStage.y}`)
+                    .attr('marker-end', 'url(#arrow)');
+            });
+            
+            // Draw stage nodes
+            const nodes = svg.append('g');
+            
+            stages.forEach((stage, i) => {
+                const node = nodes.append('g')
+                    .attr('class', 'stage-node')
+                    .attr('transform', `translate(${stage.x}, ${stage.y})`)
+                    .on('click', () => showStageDetails(stage));
+                
+                // Circle
+                node.append('circle')
+                    .attr('class', 'stage-circle')
+                    .attr('r', 60)
+                    .attr('fill', stage.color)
+                    .attr('stroke', stage.color)
+                    .attr('fill-opacity', 0.2);
+                
+                // Icon
+                node.append('text')
+                    .attr('class', 'stage-label')
+                    .attr('y', -10)
+                    .attr('font-size', '24px')
+                    .text('●');
+                
+                // Stage name
+                node.append('text')
+                    .attr('class', 'stage-label')
+                    .attr('y', 10)
+                    .text(stage.name);
+                
+                // Tool count
+                node.append('text')
+                    .attr('class', 'stage-tools')
+                    .attr('y', 28)
+                    .text(`${stage.tools.length} tools`);
+            });
+            
+            // Animate particle
+            animateWorkflowParticle(svg, stages);
+        }
+        
+        function animateWorkflowParticle(svg, stages) {
+            const particle = svg.append('circle')
+                .attr('r', 6)
+                .attr('fill', '#00aad2')
+                .attr('filter', 'drop-shadow(0 0 8px #00aad2)');
+            
+            function animate() {
+                if (!simulationRunning) {
+                    setTimeout(animate, 100);
+                    return;
+                }
+                
+                const duration = 16000 / simulationSpeed;
+                
+                stages.forEach((stage, i) => {
+                    const nextStage = stages[(i + 1) % stages.length];
+                    
+                    setTimeout(() => {
+                        particle.transition()
+                            .duration(duration / stages.length)
+                            .ease(d3.easeLinear)
+                            .attr('cx', nextStage.x)
+                            .attr('cy', nextStage.y);
+                    }, (duration / stages.length) * i);
+                });
+                
+                setTimeout(animate, duration);
+            }
+            
+            animate();
+        }
+        
+        // Render Toolchain Grid
+        function renderToolchainGrid() {
+            const grid = document.getElementById('toolchain-grid');
+            grid.innerHTML = '';
+            
+            const filteredTools = tools.filter(tool => {
+                if (currentFilter === 'all') return true;
+                return tool.status === currentFilter;
+            });
+            
+            filteredTools.forEach(tool => {
+                const card = document.createElement('div');
+                card.className = 'tool-card';
+                card.onclick = () => showToolDetails(tool);
+                
+                const statusClass = `status-${tool.status}`;
+                
+                card.innerHTML = `
+                    <div class="tool-icon" style="background: ${tool.color}20; color: ${tool.color}">
+                        <i class="${tool.icon}"></i>
+                    </div>
+                    <div class="text-white font-semibold text-sm mb-2">${tool.name}</div>
+                    <div class="status-badge ${statusClass}">
+                        <span class="status-dot" style="background: var(--status-${tool.status})"></span>
+                        ${getStatusText(tool.status)}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'active': '정상',
+                'warning': '경고',
+                'error': '오류',
+                'inactive': '비활성',
+                'progress': '진행중'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // Filter Functions
+        function filterByStatus(status) {
+            currentFilter = status;
+            
+            document.querySelectorAll('[data-filter]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${status}"]`).classList.add('active');
+            
+            renderToolchainGrid();
+        }
+        
+        function filterTools() {
+            const searchTerm = document.getElementById('tool-search').value.toLowerCase();
+            const cards = document.querySelectorAll('.tool-card');
+            
+            cards.forEach(card => {
+                const toolName = card.textContent.toLowerCase();
+                card.style.display = toolName.includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+        
+        // Modal Functions
+        function showStageDetails(stage) {
+            const modal = document.getElementById('tool-modal');
+            document.getElementById('modal-title').innerHTML = `
+                <i class="fas fa-${stage.icon} mr-2" style="color: ${stage.color}"></i>
+                ${stage.name} Stage
+            `;
+            
+            const stageTools = tools.filter(t => t.stage === stage.id);
+            
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-4">
+                    <p class="text-gray-300">이 단계에서 사용되는 도구들:</p>
+                    <div class="grid grid-cols-3 gap-4">
+                        ${stageTools.map(tool => `
+                            <div class="tool-card text-center">
+                                <div class="tool-icon mx-auto" style="background: ${tool.color}20; color: ${tool.color}">
+                                    <i class="${tool.icon}"></i>
+                                </div>
+                                <div class="text-white font-semibold text-sm mt-2">${tool.name}</div>
+                                <div class="status-badge status-${tool.status} mt-2">
+                                    <span class="status-dot" style="background: var(--status-${tool.status})"></span>
+                                    ${getStatusText(tool.status)}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function showToolDetails(tool) {
+            const modal = document.getElementById('tool-modal');
+            document.getElementById('modal-title').innerHTML = `
+                <i class="${tool.icon} mr-2" style="color: ${tool.color}"></i>
+                ${tool.name}
+            `;
+            
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">Stage</p>
+                            <p class="text-white font-semibold capitalize">${tool.stage}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">Status</p>
+                            <div class="status-badge status-${tool.status}">
+                                <span class="status-dot" style="background: var(--status-${tool.status})"></span>
+                                ${getStatusText(tool.status)}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <p class="text-gray-400 text-sm mb-2">최근 활동</p>
+                        <div class="space-y-2">
+                            <div class="activity-item">
+                                <div class="activity-icon" style="background: ${tool.color}20; color: ${tool.color}">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">빌드 성공</div>
+                                    <div class="activity-time">5분 전</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon" style="background: ${tool.color}20; color: ${tool.color}">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">빌드 시작</div>
+                                    <div class="activity-time">12분 전</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function closeModal() {
+            document.getElementById('tool-modal').classList.add('hidden');
+            document.getElementById('tool-modal').classList.remove('flex');
+        }
+        
+        // Simulation Controls
+        function toggleSimulation() {
+            simulationRunning = !simulationRunning;
+            const btn = document.getElementById('sim-toggle');
+            
+            if (simulationRunning) {
+                btn.innerHTML = '<i class="fas fa-pause mr-2"></i>일시정지';
+            } else {
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i>재생';
+            }
+        }
+        
+        function updateSimulationSpeed() {
+            simulationSpeed = parseFloat(document.getElementById('workflow-speed').value);
+        }
+        
+        // Activity Log
+        function addActivityLog(message, icon, color) {
+            const log = document.getElementById('activity-log');
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            
+            const now = new Date();
+            const time = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            
+            item.innerHTML = `
+                <div class="activity-icon" style="background: ${color}20; color: ${color}">
+                    <i class="fas fa-${icon}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">${message}</div>
+                    <div class="activity-time">${time}</div>
+                </div>
+            `;
+            
+            log.insertBefore(item, log.firstChild);
+            
+            // Keep only last 20 items
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+        
+        // Simulate Activity
+        function simulateActivity() {
+            const activities = [
+                { message: 'GitHub: 새로운 커밋 푸시됨', icon: 'code-branch', color: '#26a69a' },
+                { message: 'Jenkins: 빌드 #234 시작', icon: 'hammer', color: '#42a5f5' },
+                { message: 'JUnit: 모든 테스트 통과', icon: 'check-circle', color: '#66bb6a' },
+                { message: 'Docker: 이미지 빌드 완료', icon: 'docker', color: '#2496ed' },
+                { message: 'Kubernetes: Pod 배포 성공', icon: 'dharmachakra', color: '#326ce5' },
+                { message: 'Prometheus: 메트릭 수집 중', icon: 'chart-line', color: '#e6522c' },
+                { message: 'Grafana: 대시보드 업데이트', icon: 'chart-area', color: '#f46800' },
+                { message: 'Jira: 이슈 #456 완료', icon: 'check', color: '#7e57c2' }
+            ];
+            
+            setInterval(() => {
+                const activity = activities[Math.floor(Math.random() * activities.length)];
+                addActivityLog(activity.message, activity.icon, activity.color);
+            }, 3000);
+        }
+        
+        // Utility Functions
+        function refreshData() {
+            renderToolchainGrid();
+            addActivityLog('데이터 새로고침 완료', 'sync', '#00aad2');
+        }
+        
+        function exportData() {
+            addActivityLog('데이터 내보내기 시작', 'download', '#00aad2');
+            
+            const data = {
+                timestamp: new Date().toISOString(),
+                stages: toolchainData.stages,
+                tools: tools
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `devops-toolchain-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initWorkflowView();
+            renderToolchainGrid();
+            simulateActivity();
+        });
+    </script>
+</body>
+</html>
