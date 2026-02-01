@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FleetFlag - Physical Deployment Viewer</title>
+    <title>FleetFlag - Physical Deployment Viewer (D3.js)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         :root {
             --primary: #002c5f;
             --secondary: #00aad2;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
         }
 
         body {
@@ -28,114 +26,6 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 12px;
-        }
-
-        .hardware-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge-cpu { background: #3b82f6; color: white; }
-        .badge-ram { background: #8b5cf6; color: white; }
-        .badge-storage { background: #ec4899; color: white; }
-        .badge-network { background: #10b981; color: white; }
-
-        .health-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            animation: pulse 2s infinite;
-        }
-
-        .health-good { background: #10b981; box-shadow: 0 0 10px #10b981; }
-        .health-warning { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
-        .health-critical { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .topology-node {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid;
-        }
-
-        .topology-node:hover {
-            transform: scale(1.1);
-            box-shadow: 0 10px 30px rgba(0, 170, 210, 0.4);
-        }
-
-        .node-idc {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-            color: #3b82f6;
-        }
-
-        .node-vehicle {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: #10b981;
-            color: #10b981;
-        }
-
-        .node-ecu {
-            background: rgba(139, 92, 246, 0.2);
-            border-color: #8b5cf6;
-            color: #8b5cf6;
-        }
-
-        .topology-connection {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, #00aad2 0%, transparent 100%);
-            transform-origin: left center;
-            animation: flow 2s linear infinite;
-        }
-
-        @keyframes flow {
-            0% { background-position: 0 0; }
-            100% { background-position: 50px 0; }
-        }
-
-        .spec-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-        }
-
-        .spec-label {
-            color: #94a3b8;
-            font-size: 0.875rem;
-        }
-
-        .spec-value {
-            color: #e2e8f0;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        #canvas3d {
-            width: 100%;
-            height: 500px;
-            border-radius: 12px;
-            background: rgba(15, 23, 42, 0.5);
         }
 
         .tab-button {
@@ -159,110 +49,85 @@
             border-color: var(--secondary);
         }
 
-        .rack-server {
-            background: rgba(30, 41, 59, 0.8);
-            border: 2px solid #475569;
-            border-radius: 6px;
-            padding: 12px;
-            margin: 8px 0;
+        .node {
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .rack-server:hover {
-            border-color: var(--secondary);
-            transform: translateX(5px);
-            box-shadow: 0 4px 20px rgba(0, 170, 210, 0.3);
+        .node:hover {
+            filter: brightness(1.2);
         }
 
-        .rack-server.active {
-            border-color: var(--secondary);
-            background: rgba(0, 170, 210, 0.1);
+        .node.selected {
+            stroke: #10b981;
+            stroke-width: 4px;
         }
 
-        .power-meter {
+        .link {
+            stroke: #6b7280;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .link.active {
+            stroke: #10b981;
+            stroke-width: 3;
+            animation: dash 2s linear infinite;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+
+        .health-indicator {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #canvas3d {
             width: 100%;
-            height: 8px;
-            background: rgba(51, 65, 85, 0.5);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .power-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-            transition: width 0.5s ease;
-        }
-
-        .vehicle-diagram {
-            position: relative;
-            width: 100%;
-            height: 400px;
-            background: rgba(15, 23, 42, 0.5);
+            height: 600px;
             border-radius: 12px;
-            padding: 20px;
+            background: rgba(15, 23, 42, 0.5);
         }
 
-        .vehicle-component {
+        .spec-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .spec-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        .spec-value {
+            color: #e2e8f0;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .tooltip {
             position: absolute;
-            background: rgba(30, 41, 59, 0.8);
-            border: 2px solid;
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(0, 170, 210, 0.5);
             border-radius: 8px;
             padding: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 100px;
-            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            max-width: 300px;
         }
 
-        .vehicle-component:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0, 170, 210, 0.4);
-        }
-
-        .component-hpc {
-            border-color: #3b82f6;
-            color: #3b82f6;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .component-ccu {
-            border-color: #8b5cf6;
-            color: #8b5cf6;
-            top: 180px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .component-ecu {
-            border-color: #10b981;
-            color: #10b981;
-            top: 310px;
-        }
-
-        .ecu-adas { left: 15%; }
-        .ecu-cluster { left: 45%; transform: translateX(-50%); }
-        .ecu-tcu { right: 15%; }
-
-        .connection-line {
-            position: absolute;
-            background: linear-gradient(180deg, #00aad2 0%, transparent 100%);
-            width: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .line-hpc-ccu {
-            top: 110px;
-            height: 70px;
-        }
-
-        .line-ccu-ecu {
-            top: 240px;
-            height: 70px;
+        .tooltip.show {
+            opacity: 1;
         }
     </style>
 </head>
@@ -275,8 +140,8 @@
                     <i class="fas fa-server text-white text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-white">Physical Deployment Viewer</h1>
-                    <p class="text-sm text-gray-400">현대자동차 SDV Feature Flag 시스템 물리적 배포 구성도</p>
+                    <h1 class="text-2xl font-bold text-white">Physical Deployment Viewer (D3.js)</h1>
+                    <p class="text-sm text-gray-400">현대자동차 SDV Feature Flag 시스템 물리적 배포 구성도 - Interactive</p>
                 </div>
             </div>
             <div class="flex items-center space-x-4">
@@ -285,7 +150,7 @@
                     <div class="text-xl font-bold text-white">3 Racks · 12 Servers · 125k Vehicles</div>
                 </div>
                 <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <span class="health-indicator health-good"></span>
+                    <span class="health-indicator" style="width: 12px; height: 12px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981;"></span>
                 </div>
             </div>
         </div>
@@ -295,13 +160,16 @@
     <div class="glass-panel p-4 mb-6">
         <div class="flex space-x-4">
             <button class="tab-button active" onclick="switchTab('datacenter')">
-                <i class="fas fa-building mr-2"></i>Data Center (IDC)
+                <i class="fas fa-building mr-2"></i>Data Center (Treemap)
             </button>
             <button class="tab-button" onclick="switchTab('vehicle')">
-                <i class="fas fa-car mr-2"></i>Vehicle Architecture
+                <i class="fas fa-car mr-2"></i>Vehicle Architecture (Tree)
             </button>
             <button class="tab-button" onclick="switchTab('network')">
-                <i class="fas fa-network-wired mr-2"></i>Network Topology
+                <i class="fas fa-network-wired mr-2"></i>Network Topology (Force)
+            </button>
+            <button class="tab-button" onclick="switchTab('flow')">
+                <i class="fas fa-stream mr-2"></i>System Flow (Sankey)
             </button>
             <button class="tab-button" onclick="switchTab('3d')">
                 <i class="fas fa-cube mr-2"></i>3D Rack Viewer
@@ -309,255 +177,33 @@
         </div>
     </div>
 
-    <!-- Tab Content: Data Center -->
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Tab Content: Data Center (D3.js Treemap) -->
     <div id="tab-datacenter" class="tab-content">
-        <div class="grid grid-cols-3 gap-6 mb-6">
-            <!-- Rack 1: Frontend -->
-            <div class="glass-panel p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-white">Rack 1: Frontend</h3>
-                    <span class="health-indicator health-good"></span>
-                </div>
-                
-                <div class="rack-server" onclick="selectServer('lb1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-server text-blue-400"></i>
-                            <span class="text-white font-semibold">Load Balancer (Active)</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">16 Cores</span>
-                        <span class="hardware-badge badge-ram">64GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 23% · RAM: 41% · Network: 2.3 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 23%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('lb2')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-server text-gray-500"></i>
-                            <span class="text-white font-semibold">Load Balancer (Standby)</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">16 Cores</span>
-                        <span class="hardware-badge badge-ram">64GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 8% · RAM: 22% · Network: 0.5 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 8%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('gw1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-door-open text-purple-400"></i>
-                            <span class="text-white font-semibold">API Gateway #1</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">32 Cores</span>
-                        <span class="hardware-badge badge-ram">128GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 45% · RAM: 56% · Network: 4.1 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 45%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('gw2')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-door-open text-purple-400"></i>
-                            <span class="text-white font-semibold">API Gateway #2</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">32 Cores</span>
-                        <span class="hardware-badge badge-ram">128GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 38% · RAM: 51% · Network: 3.8 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 38%"></div>
-                    </div>
+        <div class="glass-panel p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">
+                    <i class="fas fa-building mr-2"></i>IDC Infrastructure - Treemap Visualization
+                </h3>
+                <div class="flex space-x-2">
+                    <button onclick="colorByMetric('cpu')" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">
+                        <i class="fas fa-microchip mr-2"></i>CPU 사용률
+                    </button>
+                    <button onclick="colorByMetric('ram')" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm">
+                        <i class="fas fa-memory mr-2"></i>RAM 사용률
+                    </button>
+                    <button onclick="colorByMetric('power')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm">
+                        <i class="fas fa-bolt mr-2"></i>전력 소비량
+                    </button>
                 </div>
             </div>
-
-            <!-- Rack 2: Backend -->
-            <div class="glass-panel p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-white">Rack 2: Backend</h3>
-                    <span class="health-indicator health-good"></span>
-                </div>
-                
-                <div class="rack-server" onclick="selectServer('api1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-cogs text-cyan-400"></i>
-                            <span class="text-white font-semibold">FleetFlag API #1</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">64 Cores</span>
-                        <span class="hardware-badge badge-ram">256GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 52% · RAM: 68% · Network: 5.2 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 52%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('api2')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-cogs text-cyan-400"></i>
-                            <span class="text-white font-semibold">FleetFlag API #2</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">64 Cores</span>
-                        <span class="hardware-badge badge-ram">256GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 49% · RAM: 64% · Network: 4.9 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 49%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('flipt1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-flag text-green-400"></i>
-                            <span class="text-white font-semibold">Flipt Engine #1</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">32 Cores</span>
-                        <span class="hardware-badge badge-ram">128GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 34% · RAM: 45% · Network: 2.8 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 34%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('flipt2')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-flag text-green-400"></i>
-                            <span class="text-white font-semibold">Flipt Engine #2</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">32 Cores</span>
-                        <span class="hardware-badge badge-ram">128GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 31% · RAM: 42% · Network: 2.6 Gbps</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 31%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Rack 3: Data -->
-            <div class="glass-panel p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-white">Rack 3: Data</h3>
-                    <span class="health-indicator health-good"></span>
-                </div>
-                
-                <div class="rack-server" onclick="selectServer('pg1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-database text-blue-400"></i>
-                            <span class="text-white font-semibold">PostgreSQL Primary</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">64 Cores</span>
-                        <span class="hardware-badge badge-ram">512GB</span>
-                        <span class="hardware-badge badge-storage">8TB SSD</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 41% · RAM: 73% · Disk I/O: 1.2 GB/s</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 41%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('pg2')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-database text-gray-500"></i>
-                            <span class="text-white font-semibold">PostgreSQL Standby</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">64 Cores</span>
-                        <span class="hardware-badge badge-ram">512GB</span>
-                        <span class="hardware-badge badge-storage">8TB SSD</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 15% · RAM: 68% · Disk I/O: 0.3 GB/s</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 15%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('redis1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-memory text-red-400"></i>
-                            <span class="text-white font-semibold">Redis Cluster #1</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">32 Cores</span>
-                        <span class="hardware-badge badge-ram">256GB</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 28% · RAM: 82% · Ops/sec: 125k</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 28%"></div>
-                    </div>
-                </div>
-
-                <div class="rack-server" onclick="selectServer('clickhouse1')">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-2">
-                            <i class="fas fa-chart-line text-yellow-400"></i>
-                            <span class="text-white font-semibold">ClickHouse</span>
-                        </div>
-                        <span class="health-indicator health-good"></span>
-                    </div>
-                    <div class="flex space-x-2 mb-2">
-                        <span class="hardware-badge badge-cpu">64 Cores</span>
-                        <span class="hardware-badge badge-ram">512GB</span>
-                        <span class="hardware-badge badge-storage">12TB SSD</span>
-                    </div>
-                    <div class="text-xs text-gray-400">CPU: 36% · RAM: 61% · Queries/sec: 2.4k</div>
-                    <div class="power-meter">
-                        <div class="power-bar" style="width: 36%"></div>
-                    </div>
-                </div>
-            </div>
+            <svg id="datacenterSvg" width="100%" height="600"></svg>
         </div>
 
         <!-- Server Detail Panel -->
-        <div id="server-detail" class="glass-panel p-6" style="display: none;">
+        <div id="server-detail" class="glass-panel p-6 mt-6" style="display: none;">
             <h3 class="text-xl font-bold text-white mb-4">
                 <i class="fas fa-server mr-2 text-cyan-400"></i>
                 <span id="detail-server-name">Server Details</span>
@@ -565,233 +211,100 @@
             <div class="grid grid-cols-2 gap-6">
                 <div>
                     <h4 class="text-sm font-semibold text-gray-400 mb-3">Hardware Specifications</h4>
-                    <div class="spec-row">
-                        <span class="spec-label">CPU Model</span>
-                        <span class="spec-value" id="detail-cpu-model">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">CPU Cores</span>
-                        <span class="spec-value" id="detail-cpu-cores">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">RAM</span>
-                        <span class="spec-value" id="detail-ram">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Storage</span>
-                        <span class="spec-value" id="detail-storage">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Network</span>
-                        <span class="spec-value" id="detail-network">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Power Consumption</span>
-                        <span class="spec-value" id="detail-power">-</span>
-                    </div>
+                    <div id="detail-hardware"></div>
                 </div>
                 <div>
                     <h4 class="text-sm font-semibold text-gray-400 mb-3">Current Status</h4>
-                    <div class="spec-row">
-                        <span class="spec-label">CPU Usage</span>
-                        <span class="spec-value" id="detail-cpu-usage">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">RAM Usage</span>
-                        <span class="spec-value" id="detail-ram-usage">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Disk I/O</span>
-                        <span class="spec-value" id="detail-disk-io">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Network Throughput</span>
-                        <span class="spec-value" id="detail-network-throughput">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Uptime</span>
-                        <span class="spec-value" id="detail-uptime">-</span>
-                    </div>
-                    <div class="spec-row">
-                        <span class="spec-label">Health Status</span>
-                        <span class="spec-value text-green-400" id="detail-health">Healthy</span>
-                    </div>
+                    <div id="detail-status"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tab Content: Vehicle -->
+    <!-- Tab Content: Vehicle Architecture (D3.js Tree) -->
     <div id="tab-vehicle" class="tab-content" style="display: none;">
-        <div class="grid grid-cols-2 gap-6">
-            <!-- Vehicle Diagram -->
-            <div class="glass-panel p-6">
-                <h3 class="text-lg font-bold text-white mb-4">
-                    <i class="fas fa-car mr-2"></i>Vehicle Architecture (Genesis GV80)
-                </h3>
-                <div class="vehicle-diagram">
-                    <!-- Connection Lines -->
-                    <div class="connection-line line-hpc-ccu"></div>
-                    <div class="connection-line line-ccu-ecu"></div>
-
-                    <!-- HPC Component -->
-                    <div class="vehicle-component component-hpc" onclick="selectVehicleComponent('hpc')">
-                        <i class="fas fa-microchip text-2xl mb-2"></i>
-                        <div class="font-semibold">HPC</div>
-                        <div class="text-xs text-gray-400">High Performance Computer</div>
-                    </div>
-
-                    <!-- CCU Component -->
-                    <div class="vehicle-component component-ccu" onclick="selectVehicleComponent('ccu')">
-                        <i class="fas fa-server text-2xl mb-2"></i>
-                        <div class="font-semibold">CCU</div>
-                        <div class="text-xs text-gray-400">Central Computing Unit</div>
-                    </div>
-
-                    <!-- ECU Components -->
-                    <div class="vehicle-component component-ecu ecu-adas" onclick="selectVehicleComponent('adas')">
-                        <i class="fas fa-eye text-xl mb-2"></i>
-                        <div class="font-semibold text-sm">ADAS ECU</div>
-                    </div>
-
-                    <div class="vehicle-component component-ecu ecu-cluster" onclick="selectVehicleComponent('cluster')">
-                        <i class="fas fa-tachometer-alt text-xl mb-2"></i>
-                        <div class="font-semibold text-sm">Cluster ECU</div>
-                    </div>
-
-                    <div class="vehicle-component component-ecu ecu-tcu" onclick="selectVehicleComponent('tcu')">
-                        <i class="fas fa-broadcast-tower text-xl mb-2"></i>
-                        <div class="font-semibold text-sm">TCU ECU</div>
-                    </div>
-
-                    <!-- Labels -->
-                    <div style="position: absolute; top: 140px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #94a3b8;">
-                        Ethernet 100Mbps
-                    </div>
-                    <div style="position: absolute; top: 270px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #94a3b8;">
-                        CAN Bus 500kbps
-                    </div>
-                </div>
-            </div>
-
-            <!-- Vehicle Component Detail -->
-            <div class="glass-panel p-6">
-                <h3 class="text-lg font-bold text-white mb-4">
-                    <span id="vehicle-component-name">Component Details</span>
-                </h3>
-                <div id="vehicle-component-detail">
-                    <div class="text-center text-gray-400 py-12">
-                        <i class="fas fa-mouse-pointer text-4xl mb-4"></i>
-                        <p>차량 컴포넌트를 클릭하여 상세 정보를 확인하세요</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tab Content: Network -->
-    <div id="tab-network" class="tab-content" style="display: none;">
         <div class="glass-panel p-6">
             <h3 class="text-lg font-bold text-white mb-4">
-                <i class="fas fa-network-wired mr-2"></i>Network Topology (IDC ↔ Vehicle)
+                <i class="fas fa-car mr-2"></i>Vehicle Architecture - Hierarchical Tree
             </h3>
-            <div style="position: relative; height: 600px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 40px;">
-                <!-- Internet Cloud -->
-                <div class="topology-node" style="top: 20px; left: 50%; transform: translateX(-50%); width: 120px; height: 60px; border-radius: 30px; background: rgba(100, 116, 139, 0.2); border-color: #64748b; color: #cbd5e1;">
-                    <i class="fas fa-cloud text-xl mr-2"></i>Internet
-                </div>
+            <svg id="vehicleSvg" width="100%" height="600"></svg>
+        </div>
 
-                <!-- Azure Front Door -->
-                <div class="topology-node node-idc" style="top: 120px; left: 50%; transform: translateX(-50%);" onclick="selectNetworkNode('azure')">
-                    <div>
-                        <i class="fas fa-door-open text-2xl mb-1"></i>
-                        <div class="text-xs">Azure<br>Front Door</div>
-                    </div>
-                </div>
+        <!-- Component Detail Panel -->
+        <div id="component-detail" class="glass-panel p-6 mt-6" style="display: none;">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-microchip mr-2 text-cyan-400"></i>
+                <span id="detail-component-name">Component Details</span>
+            </h3>
+            <div id="detail-component-content"></div>
+        </div>
+    </div>
 
-                <!-- IDC Firewall -->
-                <div class="topology-node node-idc" style="top: 240px; left: 50%; transform: translateX(-50%);" onclick="selectNetworkNode('firewall')">
-                    <div>
-                        <i class="fas fa-shield-alt text-2xl mb-1"></i>
-                        <div class="text-xs">IDC<br>Firewall</div>
-                    </div>
-                </div>
-
-                <!-- DMZ Zone -->
-                <div class="topology-node node-idc" style="top: 360px; left: 25%; transform: translateX(-50%);" onclick="selectNetworkNode('dmz')">
-                    <div>
-                        <i class="fas fa-shield text-2xl mb-1"></i>
-                        <div class="text-xs">DMZ<br>Zone</div>
-                    </div>
-                </div>
-
-                <!-- App Zone -->
-                <div class="topology-node node-idc" style="top: 360px; left: 75%; transform: translateX(-50%);" onclick="selectNetworkNode('app')">
-                    <div>
-                        <i class="fas fa-cogs text-2xl mb-1"></i>
-                        <div class="text-xs">App<br>Zone</div>
-                    </div>
-                </div>
-
-                <!-- Vehicle CCU -->
-                <div class="topology-node node-vehicle" style="top: 480px; left: 50%; transform: translateX(-50%);" onclick="selectNetworkNode('ccu')">
-                    <div>
-                        <i class="fas fa-car text-2xl mb-1"></i>
-                        <div class="text-xs">Vehicle<br>CCU</div>
-                    </div>
-                </div>
-
-                <!-- Connection Labels -->
-                <div style="position: absolute; top: 90px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #00aad2; background: rgba(0, 170, 210, 0.1); padding: 4px 8px; border-radius: 4px;">
-                    HTTPS/WSS
-                </div>
-                <div style="position: absolute; top: 210px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #00aad2; background: rgba(0, 170, 210, 0.1); padding: 4px 8px; border-radius: 4px;">
-                    VPN IPsec
-                </div>
-                <div style="position: absolute; top: 310px; left: 37%; font-size: 0.75rem; color: #00aad2; background: rgba(0, 170, 210, 0.1); padding: 4px 8px; border-radius: 4px;">
-                    TLS 1.3
-                </div>
-                <div style="position: absolute; top: 310px; right: 37%; font-size: 0.75rem; color: #00aad2; background: rgba(0, 170, 210, 0.1); padding: 4px 8px; border-radius: 4px;">
-                    Private
-                </div>
-                <div style="position: absolute; top: 430px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #00aad2; background: rgba(0, 170, 210, 0.1); padding: 4px 8px; border-radius: 4px;">
-                    LTE/5G + VPN
-                </div>
-
-                <!-- Network Stats -->
-                <div style="position: absolute; bottom: 20px; left: 20px; right: 20px;">
-                    <div class="grid grid-cols-4 gap-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-cyan-400">2.3 Gbps</div>
-                            <div class="text-xs text-gray-400">Total Throughput</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-green-400">8.2 ms</div>
-                            <div class="text-xs text-gray-400">Avg Latency</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-blue-400">125,847</div>
-                            <div class="text-xs text-gray-400">Active Connections</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-purple-400">99.98%</div>
-                            <div class="text-xs text-gray-400">Uptime</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Network Node Detail -->
-            <div id="network-detail" class="glass-panel p-6 mt-6" style="display: none;">
-                <h3 class="text-xl font-bold text-white mb-4">
-                    <span id="network-node-name">Network Node Details</span>
+    <!-- Tab Content: Network Topology (D3.js Force-Directed) -->
+    <div id="tab-network" class="tab-content" style="display: none;">
+        <div class="glass-panel p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">
+                    <i class="fas fa-network-wired mr-2"></i>Network Topology - Force-Directed Graph
                 </h3>
-                <div id="network-node-detail"></div>
+                <button onclick="simulateDataFlow()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                    <i class="fas fa-play mr-2"></i>데이터 흐름 시뮬레이션
+                </button>
+            </div>
+            <svg id="networkSvg" width="100%" height="600"></svg>
+        </div>
+
+        <!-- Network Stats -->
+        <div class="grid grid-cols-4 gap-6 mt-6">
+            <div class="glass-panel p-4 text-center">
+                <div class="text-2xl font-bold text-cyan-400">2.3 Gbps</div>
+                <div class="text-xs text-gray-400">Total Throughput</div>
+            </div>
+            <div class="glass-panel p-4 text-center">
+                <div class="text-2xl font-bold text-green-400">8.2 ms</div>
+                <div class="text-xs text-gray-400">Avg Latency</div>
+            </div>
+            <div class="glass-panel p-4 text-center">
+                <div class="text-2xl font-bold text-blue-400">125,847</div>
+                <div class="text-xs text-gray-400">Active Connections</div>
+            </div>
+            <div class="glass-panel p-4 text-center">
+                <div class="text-2xl font-bold text-purple-400">99.98%</div>
+                <div class="text-xs text-gray-400">Uptime</div>
             </div>
         </div>
     </div>
 
-    <!-- Tab Content: 3D Viewer -->
+    <!-- Tab Content: System Flow (D3.js Sankey) -->
+    <div id="tab-flow" class="tab-content" style="display: none;">
+        <div class="glass-panel p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-stream mr-2"></i>System Data Flow - Sankey Diagram
+            </h3>
+            <svg id="flowSvg" width="100%" height="600"></svg>
+        </div>
+
+        <!-- Flow Legend -->
+        <div class="glass-panel p-6 mt-6">
+            <h4 class="text-lg font-bold text-white mb-4">데이터 흐름량 범례</h4>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="flex items-center space-x-2">
+                    <div style="width: 20px; height: 10px; background: #3b82f6;"></div>
+                    <span class="text-sm text-gray-300">API 요청: 1,000 req/s</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div style="width: 20px; height: 10px; background: #8b5cf6;"></div>
+                    <span class="text-sm text-gray-300">DB 쓰기: 500 ops/s</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div style="width: 20px; height: 10px; background: #10b981;"></div>
+                    <span class="text-sm text-gray-300">차량 푸시: 12,500 msg/s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: 3D Viewer (Three.js) -->
     <div id="tab-3d" class="tab-content" style="display: none;">
         <div class="glass-panel p-6">
             <h3 class="text-lg font-bold text-white mb-4">
@@ -809,606 +322,607 @@
                 </button>
             </div>
             <div id="canvas3d"></div>
-            <div class="mt-4 text-sm text-gray-400">
-                <i class="fas fa-info-circle mr-2"></i>
-                마우스 드래그로 회전, 휠로 확대/축소가 가능합니다
-            </div>
         </div>
     </div>
 
     <script>
-        // Server Specifications Database
-        const serverSpecs = {
-            lb1: {
-                name: 'Load Balancer (Active)',
-                cpu: 'AMD EPYC 7543 32-Core',
-                cores: '16 Cores (32 Threads)',
-                ram: '64GB DDR4 3200MHz',
-                storage: '2TB NVMe SSD (RAID 1)',
-                network: '10 Gbps Ethernet',
-                power: '350W',
-                cpuUsage: '23%',
-                ramUsage: '41%',
-                diskIO: '450 MB/s',
-                networkThroughput: '2.3 Gbps',
-                uptime: '127 days',
-                health: 'Healthy'
-            },
-            lb2: {
-                name: 'Load Balancer (Standby)',
-                cpu: 'AMD EPYC 7543 32-Core',
-                cores: '16 Cores (32 Threads)',
-                ram: '64GB DDR4 3200MHz',
-                storage: '2TB NVMe SSD (RAID 1)',
-                network: '10 Gbps Ethernet',
-                power: '180W',
-                cpuUsage: '8%',
-                ramUsage: '22%',
-                diskIO: '120 MB/s',
-                networkThroughput: '0.5 Gbps',
-                uptime: '127 days',
-                health: 'Healthy'
-            },
-            gw1: {
-                name: 'API Gateway #1',
-                cpu: 'Intel Xeon Gold 6338 32-Core',
-                cores: '32 Cores (64 Threads)',
-                ram: '128GB DDR4 3200MHz',
-                storage: '4TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '580W',
-                cpuUsage: '45%',
-                ramUsage: '56%',
-                diskIO: '1.2 GB/s',
-                networkThroughput: '4.1 Gbps',
-                uptime: '89 days',
-                health: 'Healthy'
-            },
-            gw2: {
-                name: 'API Gateway #2',
-                cpu: 'Intel Xeon Gold 6338 32-Core',
-                cores: '32 Cores (64 Threads)',
-                ram: '128GB DDR4 3200MHz',
-                storage: '4TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '550W',
-                cpuUsage: '38%',
-                ramUsage: '51%',
-                diskIO: '1.0 GB/s',
-                networkThroughput: '3.8 Gbps',
-                uptime: '89 days',
-                health: 'Healthy'
-            },
-            api1: {
-                name: 'FleetFlag API Server #1',
-                cpu: 'AMD EPYC 7763 64-Core',
-                cores: '64 Cores (128 Threads)',
-                ram: '256GB DDR4 3200MHz',
-                storage: '8TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '780W',
-                cpuUsage: '52%',
-                ramUsage: '68%',
-                diskIO: '2.1 GB/s',
-                networkThroughput: '5.2 Gbps',
-                uptime: '64 days',
-                health: 'Healthy'
-            },
-            api2: {
-                name: 'FleetFlag API Server #2',
-                cpu: 'AMD EPYC 7763 64-Core',
-                cores: '64 Cores (128 Threads)',
-                ram: '256GB DDR4 3200MHz',
-                storage: '8TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '750W',
-                cpuUsage: '49%',
-                ramUsage: '64%',
-                diskIO: '1.9 GB/s',
-                networkThroughput: '4.9 Gbps',
-                uptime: '64 days',
-                health: 'Healthy'
-            },
-            flipt1: {
-                name: 'Flipt Engine #1',
-                cpu: 'Intel Xeon Gold 6338 32-Core',
-                cores: '32 Cores (64 Threads)',
-                ram: '128GB DDR4 3200MHz',
-                storage: '4TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '480W',
-                cpuUsage: '34%',
-                ramUsage: '45%',
-                diskIO: '850 MB/s',
-                networkThroughput: '2.8 Gbps',
-                uptime: '64 days',
-                health: 'Healthy'
-            },
-            flipt2: {
-                name: 'Flipt Engine #2',
-                cpu: 'Intel Xeon Gold 6338 32-Core',
-                cores: '32 Cores (64 Threads)',
-                ram: '128GB DDR4 3200MHz',
-                storage: '4TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '460W',
-                cpuUsage: '31%',
-                ramUsage: '42%',
-                diskIO: '780 MB/s',
-                networkThroughput: '2.6 Gbps',
-                uptime: '64 days',
-                health: 'Healthy'
-            },
-            pg1: {
-                name: 'PostgreSQL Primary',
-                cpu: 'AMD EPYC 7763 64-Core',
-                cores: '64 Cores (128 Threads)',
-                ram: '512GB DDR4 3200MHz',
-                storage: '8TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '820W',
-                cpuUsage: '41%',
-                ramUsage: '73%',
-                diskIO: '1.2 GB/s',
-                networkThroughput: '3.4 Gbps',
-                uptime: '127 days',
-                health: 'Healthy'
-            },
-            pg2: {
-                name: 'PostgreSQL Standby',
-                cpu: 'AMD EPYC 7763 64-Core',
-                cores: '64 Cores (128 Threads)',
-                ram: '512GB DDR4 3200MHz',
-                storage: '8TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '480W',
-                cpuUsage: '15%',
-                ramUsage: '68%',
-                diskIO: '0.3 GB/s',
-                networkThroughput: '1.2 Gbps',
-                uptime: '127 days',
-                health: 'Healthy'
-            },
-            redis1: {
-                name: 'Redis Cluster #1',
-                cpu: 'Intel Xeon Gold 6338 32-Core',
-                cores: '32 Cores (64 Threads)',
-                ram: '256GB DDR4 3200MHz',
-                storage: '4TB NVMe SSD (RAID 1)',
-                network: '25 Gbps Ethernet',
-                power: '420W',
-                cpuUsage: '28%',
-                ramUsage: '82%',
-                diskIO: '650 MB/s',
-                networkThroughput: '2.1 Gbps',
-                uptime: '89 days',
-                health: 'Healthy'
-            },
-            clickhouse1: {
-                name: 'ClickHouse Analytics',
-                cpu: 'AMD EPYC 7763 64-Core',
-                cores: '64 Cores (128 Threads)',
-                ram: '512GB DDR4 3200MHz',
-                storage: '12TB NVMe SSD (RAID 10)',
-                network: '25 Gbps Ethernet',
-                power: '680W',
-                cpuUsage: '36%',
-                ramUsage: '61%',
-                diskIO: '1.8 GB/s',
-                networkThroughput: '4.2 Gbps',
-                uptime: '64 days',
-                health: 'Healthy'
-            }
+        // ==================== DATA ====================
+        
+        // IDC Server Data (Treemap)
+        const idcData = {
+            name: "Hyundai IDC",
+            children: [
+                {
+                    name: "Rack 1: Frontend",
+                    children: [
+                        { name: "LB-01 (Active)", cpu: 23, ram: 41, power: 350, cores: 16, memory: "64GB", storage: "2TB NVMe", type: "Load Balancer" },
+                        { name: "LB-02 (Standby)", cpu: 8, ram: 22, power: 180, cores: 16, memory: "64GB", storage: "2TB NVMe", type: "Load Balancer" },
+                        { name: "GW-01", cpu: 45, ram: 56, power: 580, cores: 32, memory: "128GB", storage: "4TB NVMe", type: "API Gateway" },
+                        { name: "GW-02", cpu: 38, ram: 51, power: 550, cores: 32, memory: "128GB", storage: "4TB NVMe", type: "API Gateway" }
+                    ]
+                },
+                {
+                    name: "Rack 2: Backend",
+                    children: [
+                        { name: "API-01", cpu: 52, ram: 68, power: 780, cores: 64, memory: "256GB", storage: "8TB NVMe", type: "FleetFlag API" },
+                        { name: "API-02", cpu: 49, ram: 64, power: 750, cores: 64, memory: "256GB", storage: "8TB NVMe", type: "FleetFlag API" },
+                        { name: "FLIPT-01", cpu: 34, ram: 45, power: 480, cores: 32, memory: "128GB", storage: "4TB NVMe", type: "Flipt Engine" },
+                        { name: "FLIPT-02", cpu: 31, ram: 42, power: 460, cores: 32, memory: "128GB", storage: "4TB NVMe", type: "Flipt Engine" }
+                    ]
+                },
+                {
+                    name: "Rack 3: Data",
+                    children: [
+                        { name: "PG-01 (Primary)", cpu: 41, ram: 73, power: 820, cores: 64, memory: "512GB", storage: "8TB SSD", type: "PostgreSQL" },
+                        { name: "PG-02 (Standby)", cpu: 15, ram: 68, power: 480, cores: 64, memory: "512GB", storage: "8TB SSD", type: "PostgreSQL" },
+                        { name: "REDIS-01", cpu: 28, ram: 82, power: 420, cores: 32, memory: "256GB", storage: "4TB NVMe", type: "Redis Cluster" },
+                        { name: "CH-01", cpu: 36, ram: 61, power: 680, cores: 64, memory: "512GB", storage: "12TB SSD", type: "ClickHouse" }
+                    ]
+                }
+            ]
         };
 
-        // Vehicle Component Specs
-        const vehicleSpecs = {
-            hpc: {
-                name: 'HPC (High Performance Computer)',
-                description: 'SDV 핵심 컴퓨팅 유닛 - Feature Flag Agent 실행',
-                hardware: {
-                    'Processor': 'NVIDIA Tegra Xavier (8-core ARM + GPU)',
-                    'RAM': '32GB LPDDR4X',
-                    'Storage': '256GB UFS 3.1',
-                    'OS': 'Ubuntu 20.04 LTS (Real-Time Kernel)',
-                    'Container Runtime': 'Kubernetes 1.28',
-                    'Network': 'Ethernet 1Gbps (TSN)'
+        // Vehicle Architecture Data (Tree)
+        const vehicleData = {
+            name: "Vehicle (Genesis GV80)",
+            children: [
+                {
+                    name: "HPC",
+                    description: "High Performance Computer",
+                    children: [
+                        { name: "FleetFlag Agent", description: "Rust SDK v2.1.0" },
+                        { name: "Feature Apps", description: "OTA, Navigation" },
+                        { name: "SQLite Cache", description: "7-day retention" }
+                    ]
                 },
-                software: {
-                    'FleetFlag Agent': 'v2.1.0 (Rust SDK)',
-                    'OpenFeature SDK': 'v1.5.0',
-                    'SQLite Cache': '7-day retention',
-                    'gRPC Client': 'Bidirectional sync',
-                    'Safety Gatekeeper': 'ASIL-D certified'
+                {
+                    name: "CCU",
+                    description: "Central Computing Unit",
+                    children: [
+                        { name: "Sync Agent", description: "gRPC Bidirectional" },
+                        { name: "VPN Client", description: "WireGuard" },
+                        { name: "CAN Gateway", description: "Dual CAN-FD" }
+                    ]
                 },
-                metrics: {
-                    'CPU Usage': '18%',
-                    'RAM Usage': '12GB / 32GB (38%)',
-                    'Cache Hit Rate': '97.8%',
-                    'Sync Latency': '8.2ms',
-                    'Power Consumption': '45W'
+                {
+                    name: "ECUs",
+                    description: "Electronic Control Units",
+                    children: [
+                        { name: "ADAS ECU", description: "Renesas R-Car V3H" },
+                        { name: "Cluster ECU", description: "TI Jacinto DRA829" },
+                        { name: "TCU ECU", description: "Qualcomm SA8155P" }
+                    ]
                 }
-            },
-            ccu: {
-                name: 'CCU (Central Computing Unit)',
-                description: 'Gateway - IDC 연결 및 CAN 브릿지',
-                hardware: {
-                    'Processor': 'NXP i.MX 8 QuadMax (Cortex-A72)',
-                    'RAM': '8GB LPDDR4',
-                    'Storage': '64GB eMMC',
-                    'LTE/5G Modem': 'Qualcomm X55 5G',
-                    'CAN Controller': 'Dual CAN-FD',
-                    'Network': 'Ethernet 100Mbps'
-                },
-                software: {
-                    'Sync Agent': 'v1.8.2 (Go)',
-                    'VPN Client': 'WireGuard',
-                    'TLS Stack': 'OpenSSL 3.0',
-                    'CAN Gateway': 'Vector CANoe-compatible'
-                },
-                metrics: {
-                    'CPU Usage': '34%',
-                    'RAM Usage': '3.2GB / 8GB (40%)',
-                    'Network Uplink': '450 kbps',
-                    'CAN Traffic': '125 msg/sec',
-                    'Power Consumption': '12W'
-                }
-            },
-            adas: {
-                name: 'ADAS ECU',
-                description: 'Advanced Driver Assistance System',
-                hardware: {
-                    'Processor': 'Renesas R-Car V3H',
-                    'RAM': '4GB LPDDR4',
-                    'Sensors': 'Camera (8), Radar (5), LiDAR (1)',
-                    'CAN': 'CAN-FD 5Mbps'
-                },
-                features: [
-                    'Lane Keeping Assist (LKA)',
-                    'Adaptive Cruise Control (ACC)',
-                    'Autonomous Emergency Braking (AEB)',
-                    'Blind Spot Detection (BSD)'
-                ],
-                flags: {
-                    'feature_adas_lka_enhanced': 'Enabled (95% rollout)',
-                    'feature_adas_acc_v2': 'Canary (5% rollout)',
-                    'feature_adas_aeb_sensitive': 'Disabled (Safety review)'
-                }
-            },
-            cluster: {
-                name: 'Cluster ECU',
-                description: 'Digital Instrument Cluster',
-                hardware: {
-                    'Processor': 'TI Jacinto DRA829',
-                    'RAM': '2GB LPDDR4',
-                    'Display': '12.3" TFT LCD (1920x720)',
-                    'CAN': 'CAN 2.0B 500kbps'
-                },
-                features: [
-                    'Speedometer / Tachometer',
-                    'Navigation Display',
-                    'ADAS Status Indicators',
-                    'Warning Alerts'
-                ],
-                flags: {
-                    'feature_cluster_theme_dark': 'Enabled (100%)',
-                    'feature_cluster_hud_enhanced': 'Enabled (80% rollout)',
-                    'feature_cluster_nav_3d': 'A/B Test (50/50)'
-                }
-            },
-            tcu: {
-                name: 'TCU (Telematics Control Unit)',
-                description: 'Vehicle Connectivity Gateway',
-                hardware: {
-                    'Processor': 'Qualcomm SA8155P',
-                    'RAM': '8GB LPDDR4X',
-                    'LTE/5G': 'Qualcomm X55 5G',
-                    'Wi-Fi': '802.11ax (Wi-Fi 6)',
-                    'Bluetooth': '5.2',
-                    'GPS': 'Multi-GNSS (GPS, GLONASS, Galileo, BeiDou)'
-                },
-                features: [
-                    'OTA Update Management',
-                    'Remote Vehicle Control',
-                    'Stolen Vehicle Tracking',
-                    'eCall (Emergency Call)'
-                ],
-                flags: {
-                    'feature_tcu_ota_differential': 'Enabled (100%)',
-                    'feature_tcu_remote_start': 'Enabled (Regional)',
-                    'feature_tcu_ecall_test': 'Canary (1% rollout)'
-                }
-            }
+            ]
         };
 
-        // Network Node Specs
-        const networkNodes = {
-            azure: {
-                name: 'Azure Front Door',
-                type: 'CDN & DDoS Protection',
-                specs: {
-                    'Provider': 'Microsoft Azure',
-                    'Regions': '60+ global PoPs',
-                    'SSL Termination': 'TLS 1.3',
-                    'WAF': 'OWASP Top 10 protection',
-                    'DDoS Protection': 'Up to 2 Tbps'
-                },
-                metrics: {
-                    'Requests/sec': '24,500',
-                    'Avg Latency': '12ms',
-                    'Cache Hit Rate': '94.2%',
-                    'Bandwidth': '2.8 Gbps'
-                }
-            },
-            firewall: {
-                name: 'Hyundai IDC Firewall',
-                type: 'Next-Gen Firewall (NGFW)',
-                specs: {
-                    'Model': 'Palo Alto PA-5260',
-                    'Throughput': '50 Gbps',
-                    'Concurrent Sessions': '10M',
-                    'IPS': 'Enabled',
-                    'SSL Decryption': 'Selective'
-                },
-                rules: {
-                    'Total Rules': '1,248',
-                    'Allow Rules': '847',
-                    'Block Rules': '401',
-                    'Blocked IPs (24h)': '12,457'
-                }
-            },
-            dmz: {
-                name: 'DMZ Zone',
-                type: 'Demilitarized Zone',
-                components: [
-                    'Load Balancers (Active/Standby)',
-                    'API Gateways (2x)',
-                    'Reverse Proxy (Nginx)',
-                    'Rate Limiter (Redis)'
-                ],
-                security: {
-                    'Access Control': 'IP Whitelist only',
-                    'Auth': 'mTLS + JWT',
-                    'Rate Limit': '10,000 req/min per IP',
-                    'Monitoring': 'Azure Sentinel'
-                }
-            },
-            app: {
-                name: 'Application Zone',
-                type: 'Private Network',
-                components: [
-                    'FleetFlag API Servers (2x)',
-                    'Flipt Engines (2x)',
-                    'PostgreSQL Cluster (Primary + Standby)',
-                    'Redis Cache Cluster (3 nodes)',
-                    'ClickHouse Analytics'
-                ],
-                security: {
-                    'Network': '10.0.0.0/16 (RFC1918)',
-                    'Access': 'DMZ Zone only',
-                    'Encryption': 'IPsec (internal)',
-                    'Monitoring': 'Prometheus + Grafana'
-                }
-            },
-            ccu: {
-                name: 'Vehicle CCU',
-                type: 'In-Vehicle Gateway',
-                connection: {
-                    'Uplink': 'LTE Cat.12 / 5G NSA',
-                    'VPN': 'WireGuard tunnel to IDC',
-                    'Encryption': 'AES-256-GCM',
-                    'Compression': 'gzip (level 6)',
-                    'Heartbeat': 'Every 30 seconds'
-                },
-                metrics: {
-                    'Active Vehicles': '125,847',
-                    'Avg RTT': '45ms',
-                    'Data Usage': '2.3 MB/day per vehicle',
-                    'Sync Success Rate': '99.6%'
-                }
-            }
+        // Network Topology Data (Force-Directed)
+        const networkNodes = [
+            { id: 'internet', label: 'Internet', type: 'cloud', x: 400, y: 50 },
+            { id: 'azure', label: 'Azure Front Door', type: 'cdn', x: 400, y: 150 },
+            { id: 'firewall', label: 'IDC Firewall', type: 'security', x: 400, y: 250 },
+            { id: 'dmz', label: 'DMZ Zone', type: 'zone', x: 200, y: 350 },
+            { id: 'app', label: 'App Zone', type: 'zone', x: 400, y: 350 },
+            { id: 'data', label: 'Data Zone', type: 'zone', x: 600, y: 350 },
+            { id: 'vehicle', label: 'Vehicle CCU', type: 'vehicle', x: 400, y: 500 }
+        ];
+
+        const networkLinks = [
+            { source: 'internet', target: 'azure', label: 'HTTPS/WSS' },
+            { source: 'azure', target: 'firewall', label: 'VPN IPsec' },
+            { source: 'firewall', target: 'dmz', label: 'TLS 1.3' },
+            { source: 'firewall', target: 'app', label: 'Private' },
+            { source: 'firewall', target: 'data', label: 'Private' },
+            { source: 'dmz', target: 'vehicle', label: 'LTE/5G' }
+        ];
+
+        // System Flow Data (Sankey)
+        const flowData = {
+            nodes: [
+                { name: "Admin Console" },
+                { name: "FleetFlag API" },
+                { name: "Flipt Engine" },
+                { name: "PostgreSQL" },
+                { name: "Redis Pub/Sub" },
+                { name: "Vehicle Agents\n(125k)" },
+                { name: "Feature SDK" },
+                { name: "ClickHouse" }
+            ],
+            links: [
+                { source: 0, target: 1, value: 1000 },
+                { source: 1, target: 2, value: 1000 },
+                { source: 2, target: 3, value: 500 },
+                { source: 3, target: 4, value: 800 },
+                { source: 4, target: 5, value: 12500 },
+                { source: 5, target: 6, value: 12500 },
+                { source: 6, target: 7, value: 4500 }
+            ]
         };
 
-        // Tab Switching
+        // ==================== TAB SWITCHING ====================
+        
         function switchTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
             });
-
-            // Remove active class from all buttons
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
 
-            // Show selected tab
             document.getElementById('tab-' + tabName).style.display = 'block';
-
-            // Add active class to clicked button
             event.target.closest('.tab-button').classList.add('active');
 
-            // Initialize 3D view if needed
-            if (tabName === '3d' && !window.scene) {
+            if (tabName === 'datacenter' && !window.treemapInitialized) {
+                initDataCenterTreemap();
+            } else if (tabName === 'vehicle' && !window.vehicleTreeInitialized) {
+                initVehicleTree();
+            } else if (tabName === 'network' && !window.networkInitialized) {
+                initNetworkTopology();
+            } else if (tabName === 'flow' && !window.flowInitialized) {
+                initSystemFlow();
+            } else if (tabName === '3d' && !window.scene) {
                 init3DView();
             }
         }
 
-        // Select Server
-        function selectServer(serverId) {
-            const spec = serverSpecs[serverId];
-            if (!spec) return;
+        // ==================== TAB 1: DATA CENTER TREEMAP ====================
+        
+        let currentMetric = 'cpu';
+        
+        function initDataCenterTreemap() {
+            const svg = d3.select('#datacenterSvg');
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 600;
 
-            // Remove active class from all servers
-            document.querySelectorAll('.rack-server').forEach(s => {
-                s.classList.remove('active');
-            });
+            svg.selectAll('*').remove();
 
-            // Add active class to clicked server
-            event.target.closest('.rack-server').classList.add('active');
+            const g = svg.append('g');
 
-            // Update detail panel
-            document.getElementById('detail-server-name').textContent = spec.name;
-            document.getElementById('detail-cpu-model').textContent = spec.cpu;
-            document.getElementById('detail-cpu-cores').textContent = spec.cores;
-            document.getElementById('detail-ram').textContent = spec.ram;
-            document.getElementById('detail-storage').textContent = spec.storage;
-            document.getElementById('detail-network').textContent = spec.network;
-            document.getElementById('detail-power').textContent = spec.power;
-            document.getElementById('detail-cpu-usage').textContent = spec.cpuUsage;
-            document.getElementById('detail-ram-usage').textContent = spec.ramUsage;
-            document.getElementById('detail-disk-io').textContent = spec.diskIO;
-            document.getElementById('detail-network-throughput').textContent = spec.networkThroughput;
-            document.getElementById('detail-uptime').textContent = spec.uptime;
-            document.getElementById('detail-health').textContent = spec.health;
+            const treemap = d3.treemap()
+                .size([width, height])
+                .paddingOuter(3)
+                .paddingTop(30)
+                .paddingInner(2)
+                .round(true);
 
-            // Show detail panel
+            const root = d3.hierarchy(idcData)
+                .sum(d => d.power || 0)
+                .sort((a, b) => b.value - a.value);
+
+            treemap(root);
+
+            const colorScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range(['#3b82f6', '#ef4444']);
+
+            const cell = g.selectAll('g')
+                .data(root.leaves())
+                .join('g')
+                .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+            cell.append('rect')
+                .attr('width', d => d.x1 - d.x0)
+                .attr('height', d => d.y1 - d.y0)
+                .attr('fill', d => colorScale(d.data[currentMetric]))
+                .attr('stroke', '#1e293b')
+                .attr('stroke-width', 2)
+                .attr('rx', 6)
+                .style('cursor', 'pointer')
+                .on('click', (event, d) => showServerDetail(d.data))
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke', '#00aad2').attr('stroke-width', 3);
+                    showTooltip(event, d.data);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke', '#1e293b').attr('stroke-width', 2);
+                    hideTooltip();
+                });
+
+            cell.append('text')
+                .attr('x', 4)
+                .attr('y', 20)
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .text(d => d.data.name);
+
+            cell.append('text')
+                .attr('x', 4)
+                .attr('y', 40)
+                .attr('fill', 'rgba(255,255,255,0.8)')
+                .attr('font-size', '10px')
+                .text(d => `CPU: ${d.data.cpu}% | RAM: ${d.data.ram}% | ${d.data.power}W`);
+
+            // Add rack labels
+            const racks = g.selectAll('.rack-label')
+                .data(root.children)
+                .join('g')
+                .attr('class', 'rack-label')
+                .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+            racks.append('rect')
+                .attr('width', d => d.x1 - d.x0)
+                .attr('height', 25)
+                .attr('fill', 'rgba(0, 170, 210, 0.3)')
+                .attr('rx', 6);
+
+            racks.append('text')
+                .attr('x', 8)
+                .attr('y', 17)
+                .attr('fill', '#00aad2')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'bold')
+                .text(d => d.data.name);
+
+            window.treemapInitialized = true;
+            window.treemapSvg = svg;
+            window.treemapRoot = root;
+        }
+
+        function colorByMetric(metric) {
+            currentMetric = metric;
+            const svg = window.treemapSvg;
+            const root = window.treemapRoot;
+
+            const colorScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range(['#3b82f6', '#ef4444']);
+
+            svg.selectAll('rect')
+                .filter(d => d && d.data && d.data[metric])
+                .transition()
+                .duration(500)
+                .attr('fill', d => colorScale(d.data[metric]));
+        }
+
+        function showServerDetail(data) {
+            document.getElementById('detail-server-name').textContent = data.name;
+            
+            const hardware = `
+                <div class="spec-row"><span class="spec-label">Type</span><span class="spec-value">${data.type}</span></div>
+                <div class="spec-row"><span class="spec-label">CPU Cores</span><span class="spec-value">${data.cores} Cores</span></div>
+                <div class="spec-row"><span class="spec-label">RAM</span><span class="spec-value">${data.memory}</span></div>
+                <div class="spec-row"><span class="spec-label">Storage</span><span class="spec-value">${data.storage}</span></div>
+            `;
+            
+            const status = `
+                <div class="spec-row"><span class="spec-label">CPU Usage</span><span class="spec-value">${data.cpu}%</span></div>
+                <div class="spec-row"><span class="spec-label">RAM Usage</span><span class="spec-value">${data.ram}%</span></div>
+                <div class="spec-row"><span class="spec-label">Power Consumption</span><span class="spec-value">${data.power}W</span></div>
+            `;
+            
+            document.getElementById('detail-hardware').innerHTML = hardware;
+            document.getElementById('detail-status').innerHTML = status;
             document.getElementById('server-detail').style.display = 'block';
             document.getElementById('server-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        // Select Vehicle Component
-        function selectVehicleComponent(componentId) {
-            const spec = vehicleSpecs[componentId];
-            if (!spec) return;
+        // ==================== TAB 2: VEHICLE TREE ====================
+        
+        function initVehicleTree() {
+            const svg = d3.select('#vehicleSvg');
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 600;
 
-            document.getElementById('vehicle-component-name').innerHTML = 
-                `<i class="fas fa-microchip mr-2 text-cyan-400"></i>${spec.name}`;
+            svg.selectAll('*').remove();
 
-            let html = `<div class="text-sm text-gray-400 mb-4">${spec.description}</div>`;
+            const g = svg.append('g').attr('transform', `translate(${width/2},50)`);
 
-            if (spec.hardware) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3">Hardware Specifications</h4>';
-                for (const [key, value] of Object.entries(spec.hardware)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
+            const tree = d3.tree()
+                .size([width - 200, height - 100])
+                .separation((a, b) => (a.parent == b.parent ? 1 : 1.2));
 
-            if (spec.software) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Software Stack</h4>';
-                for (const [key, value] of Object.entries(spec.software)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
+            const root = d3.hierarchy(vehicleData);
+            tree(root);
 
-            if (spec.features) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Features</h4>';
-                html += '<ul class="space-y-2">';
-                spec.features.forEach(feature => {
-                    html += `<li class="text-sm text-gray-300"><i class="fas fa-check-circle text-green-400 mr-2"></i>${feature}</li>`;
+            // Links
+            g.selectAll('.link')
+                .data(root.links())
+                .join('path')
+                .attr('class', 'link')
+                .attr('d', d3.linkVertical()
+                    .x(d => d.x - width/2)
+                    .y(d => d.y))
+                .attr('fill', 'none')
+                .attr('stroke', '#6b7280')
+                .attr('stroke-width', 2);
+
+            // Nodes
+            const node = g.selectAll('.node')
+                .data(root.descendants())
+                .join('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${d.x - width/2},${d.y})`)
+                .style('cursor', 'pointer')
+                .on('click', (event, d) => showComponentDetail(d.data));
+
+            node.append('circle')
+                .attr('r', d => d.depth === 0 ? 40 : d.depth === 1 ? 30 : 20)
+                .attr('fill', d => {
+                    if (d.depth === 0) return '#3b82f6';
+                    if (d.depth === 1) return '#8b5cf6';
+                    return '#10b981';
+                })
+                .attr('stroke', '#00aad2')
+                .attr('stroke-width', 2)
+                .on('mouseover', function() {
+                    d3.select(this).transition().duration(200)
+                        .attr('r', d => (d.depth === 0 ? 40 : d.depth === 1 ? 30 : 20) + 5)
+                        .attr('stroke-width', 4);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).transition().duration(200)
+                        .attr('r', d => d.depth === 0 ? 40 : d.depth === 1 ? 30 : 20)
+                        .attr('stroke-width', 2);
                 });
-                html += '</ul>';
-            }
 
-            if (spec.flags) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Active Feature Flags</h4>';
-                for (const [key, value] of Object.entries(spec.flags)) {
-                    const color = value.includes('Enabled') ? 'green' : value.includes('Canary') ? 'yellow' : 'red';
-                    html += `<div class="spec-row">
-                        <span class="spec-label font-mono text-xs">${key}</span>
-                        <span class="spec-value text-${color}-400">${value}</span>
-                    </div>`;
-                }
-            }
+            node.append('text')
+                .attr('dy', d => d.depth === 0 ? 5 : 5)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'white')
+                .attr('font-size', d => d.depth === 0 ? '14px' : d.depth === 1 ? '12px' : '10px')
+                .attr('font-weight', 'bold')
+                .text(d => d.data.name);
 
-            if (spec.metrics) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Real-time Metrics</h4>';
-                for (const [key, value] of Object.entries(spec.metrics)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            document.getElementById('vehicle-component-detail').innerHTML = html;
+            window.vehicleTreeInitialized = true;
         }
 
-        // Select Network Node
-        function selectNetworkNode(nodeId) {
-            const node = networkNodes[nodeId];
-            if (!node) return;
-
-            document.getElementById('network-node-name').innerHTML = 
-                `<i class="fas fa-network-wired mr-2 text-cyan-400"></i>${node.name}`;
-
-            let html = `<div class="text-sm text-cyan-400 mb-4 font-semibold">${node.type}</div>`;
-
-            if (node.specs) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3">Specifications</h4>';
-                for (const [key, value] of Object.entries(node.specs)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            if (node.components) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Components</h4>';
-                html += '<ul class="space-y-2">';
-                node.components.forEach(comp => {
-                    html += `<li class="text-sm text-gray-300"><i class="fas fa-server text-cyan-400 mr-2"></i>${comp}</li>`;
+        function showComponentDetail(data) {
+            document.getElementById('detail-component-name').textContent = data.name;
+            
+            let content = `<div class="text-sm text-gray-400 mb-4">${data.description || ''}</div>`;
+            
+            if (data.children) {
+                content += '<h4 class="text-sm font-semibold text-gray-400 mb-3">Sub-components</h4><ul class="space-y-2">';
+                data.children.forEach(child => {
+                    content += `<li class="text-sm text-gray-300"><i class="fas fa-microchip text-cyan-400 mr-2"></i>${child.name}: ${child.description || ''}</li>`;
                 });
-                html += '</ul>';
+                content += '</ul>';
             }
-
-            if (node.security) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Security</h4>';
-                for (const [key, value] of Object.entries(node.security)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            if (node.rules) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Firewall Rules</h4>';
-                for (const [key, value] of Object.entries(node.rules)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            if (node.connection) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Connection Details</h4>';
-                for (const [key, value] of Object.entries(node.connection)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            if (node.metrics) {
-                html += '<h4 class="text-sm font-semibold text-gray-400 mb-3 mt-4">Metrics</h4>';
-                for (const [key, value] of Object.entries(node.metrics)) {
-                    html += `<div class="spec-row"><span class="spec-label">${key}</span><span class="spec-value">${value}</span></div>`;
-                }
-            }
-
-            document.getElementById('network-node-detail').innerHTML = html;
-            document.getElementById('network-detail').style.display = 'block';
-            document.getElementById('network-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            document.getElementById('detail-component-content').innerHTML = content;
+            document.getElementById('component-detail').style.display = 'block';
+            document.getElementById('component-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        // 3D View Functions
+        // ==================== TAB 3: NETWORK TOPOLOGY ====================
+        
+        function initNetworkTopology() {
+            const svg = d3.select('#networkSvg');
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 600;
+
+            svg.selectAll('*').remove();
+
+            const g = svg.append('g');
+
+            const simulation = d3.forceSimulation(networkNodes)
+                .force('link', d3.forceLink(networkLinks).id(d => d.id).distance(150))
+                .force('charge', d3.forceManyBody().strength(-1000))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(80));
+
+            // Links
+            const link = g.append('g')
+                .selectAll('line')
+                .data(networkLinks)
+                .join('line')
+                .attr('class', 'link')
+                .attr('stroke', '#6b7280')
+                .attr('stroke-width', 3);
+
+            // Link labels
+            const linkLabel = g.append('g')
+                .selectAll('text')
+                .data(networkLinks)
+                .join('text')
+                .attr('fill', '#94a3b8')
+                .attr('font-size', '10px')
+                .attr('text-anchor', 'middle')
+                .text(d => d.label);
+
+            // Nodes
+            const node = g.append('g')
+                .selectAll('g')
+                .data(networkNodes)
+                .join('g')
+                .attr('class', 'node')
+                .style('cursor', 'pointer')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            node.append('circle')
+                .attr('r', 50)
+                .attr('fill', d => {
+                    const colors = {
+                        cloud: '#64748b',
+                        cdn: '#3b82f6',
+                        security: '#ef4444',
+                        zone: '#10b981',
+                        vehicle: '#f59e0b'
+                    };
+                    return colors[d.type] || '#6b7280';
+                })
+                .attr('stroke', '#00aad2')
+                .attr('stroke-width', 2)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke-width', 4);
+                    showTooltip(event, d);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke-width', 2);
+                    hideTooltip();
+                });
+
+            node.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', 5)
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .text(d => d.label.split(' ')[0])
+                .each(function(d) {
+                    const text = d3.select(this);
+                    const words = d.label.split(' ');
+                    if (words.length > 1) {
+                        text.append('tspan')
+                            .attr('x', 0)
+                            .attr('dy', '1.2em')
+                            .text(words.slice(1).join(' '));
+                    }
+                });
+
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                linkLabel
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2);
+
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            function dragged(event) {
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            }
+
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.subject.fx = null;
+                event.subject.fy = null;
+            }
+
+            window.networkInitialized = true;
+            window.networkSimulation = simulation;
+        }
+
+        function simulateDataFlow() {
+            const svg = d3.select('#networkSvg');
+            const links = svg.selectAll('.link');
+
+            links.transition()
+                .duration(500)
+                .attr('stroke', '#10b981')
+                .attr('stroke-width', 5)
+                .transition()
+                .duration(500)
+                .attr('stroke', '#6b7280')
+                .attr('stroke-width', 3);
+        }
+
+        // ==================== TAB 4: SYSTEM FLOW SANKEY ====================
+        
+        function initSystemFlow() {
+            const svg = d3.select('#flowSvg');
+            const width = svg.node().getBoundingClientRect().width;
+            const height = 600;
+
+            svg.selectAll('*').remove();
+
+            const sankey = d3.sankey()
+                .nodeWidth(36)
+                .nodePadding(40)
+                .extent([[1, 5], [width - 1, height - 5]]);
+
+            const {nodes, links} = sankey({
+                nodes: flowData.nodes.map(d => Object.assign({}, d)),
+                links: flowData.links.map(d => Object.assign({}, d))
+            });
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(d3.range(0, 8))
+                .range(['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']);
+
+            // Links
+            svg.append('g')
+                .selectAll('path')
+                .data(links)
+                .join('path')
+                .attr('d', d3.sankeyLinkHorizontal())
+                .attr('stroke', (d, i) => colorScale(i))
+                .attr('stroke-width', d => Math.max(1, d.width))
+                .attr('fill', 'none')
+                .attr('opacity', 0.5)
+                .on('mouseover', function() {
+                    d3.select(this).attr('opacity', 0.8);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('opacity', 0.5);
+                });
+
+            // Nodes
+            const node = svg.append('g')
+                .selectAll('g')
+                .data(nodes)
+                .join('g');
+
+            node.append('rect')
+                .attr('x', d => d.x0)
+                .attr('y', d => d.y0)
+                .attr('height', d => d.y1 - d.y0)
+                .attr('width', d => d.x1 - d.x0)
+                .attr('fill', (d, i) => colorScale(i))
+                .attr('stroke', '#000')
+                .attr('rx', 4)
+                .style('cursor', 'pointer')
+                .on('mouseover', function() {
+                    d3.select(this).attr('stroke', '#00aad2').attr('stroke-width', 3);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke', '#000').attr('stroke-width', 1);
+                });
+
+            node.append('text')
+                .attr('x', d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                .attr('y', d => (d.y1 + d.y0) / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .text(d => d.name);
+
+            window.flowInitialized = true;
+        }
+
+        // ==================== TAB 5: 3D VIEWER ====================
+        
         let scene, camera, renderer, controls;
         let rackMeshes = [];
 
         function init3DView() {
             const container = document.getElementById('canvas3d');
             const width = container.clientWidth;
-            const height = 500;
+            const height = 600;
 
-            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0f172a);
             scene.fog = new THREE.Fog(0x0f172a, 10, 50);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
             camera.position.set(15, 10, 15);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(width, height);
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // Controls
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
 
-            // Lights
             const ambientLight = new THREE.AmbientLight(0x404040, 2);
             scene.add(ambientLight);
 
@@ -1417,21 +931,17 @@
             directionalLight.castShadow = true;
             scene.add(directionalLight);
 
-            // Grid
             const gridHelper = new THREE.GridHelper(40, 40, 0x00aad2, 0x1e293b);
             scene.add(gridHelper);
 
-            // Create 3 Racks
             createRack(-8, 0, 0, 0x3b82f6, 'Rack 1: Frontend');
             createRack(0, 0, 0, 0x8b5cf6, 'Rack 2: Backend');
             createRack(8, 0, 0, 0x10b981, 'Rack 3: Data');
 
-            // Animation
             animate();
         }
 
         function createRack(x, y, z, color, label) {
-            // Rack frame
             const frameGeometry = new THREE.BoxGeometry(2, 8, 1);
             const frameMaterial = new THREE.MeshPhongMaterial({
                 color: 0x1e293b,
@@ -1443,7 +953,6 @@
             frame.castShadow = true;
             scene.add(frame);
 
-            // Servers (4 per rack)
             for (let i = 0; i < 4; i++) {
                 const serverGeometry = new THREE.BoxGeometry(1.8, 1.5, 0.8);
                 const serverMaterial = new THREE.MeshPhongMaterial({
@@ -1457,7 +966,6 @@
                 scene.add(server);
                 rackMeshes.push(server);
 
-                // LED indicators
                 const ledGeometry = new THREE.SphereGeometry(0.05, 16, 16);
                 const ledMaterial = new THREE.MeshBasicMaterial({
                     color: 0x10b981,
@@ -1468,7 +976,6 @@
                 scene.add(led);
             }
 
-            // Label
             createTextLabel(label, x, 8.5, z);
         }
 
@@ -1496,7 +1003,6 @@
             requestAnimationFrame(animate);
             controls.update();
 
-            // Pulsing effect for servers
             rackMeshes.forEach((mesh, index) => {
                 const time = Date.now() * 0.001;
                 mesh.material.emissiveIntensity = 0.2 + Math.sin(time + index * 0.5) * 0.1;
@@ -1522,28 +1028,44 @@
             controls.reset();
         }
 
-        // Window resize
+        // ==================== TOOLTIP ====================
+        
+        function showTooltip(event, data) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="font-bold text-cyan-400 mb-2">${data.label || data.name}</div>
+                <div class="text-sm text-gray-300">
+                    ${data.type ? `Type: ${data.type}<br>` : ''}
+                    ${data.cpu ? `CPU: ${data.cpu}%<br>` : ''}
+                    ${data.ram ? `RAM: ${data.ram}%<br>` : ''}
+                    ${data.power ? `Power: ${data.power}W` : ''}
+                </div>
+            `;
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY + 10 + 'px';
+            tooltip.classList.add('show');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        // ==================== INITIALIZATION ====================
+        
+        window.addEventListener('load', () => {
+            initDataCenterTreemap();
+        });
+
         window.addEventListener('resize', () => {
             if (renderer && camera) {
                 const container = document.getElementById('canvas3d');
                 const width = container.clientWidth;
-                const height = 500;
+                const height = 600;
                 camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(width, height);
             }
         });
-
-        // Auto-update metrics
-        setInterval(() => {
-            // Simulate real-time updates (optional)
-            document.querySelectorAll('.power-bar').forEach(bar => {
-                const currentWidth = parseFloat(bar.style.width);
-                const change = (Math.random() - 0.5) * 5;
-                const newWidth = Math.max(10, Math.min(90, currentWidth + change));
-                bar.style.width = newWidth + '%';
-            });
-        }, 3000);
     </script>
 </body>
 </html>
