@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - DevOps Pipeline Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Pipeline Stage */
+        .pipeline-stage {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .pipeline-stage:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 170, 210, 0.3);
+        }
+
+        .pipeline-stage.active {
+            border: 2px solid var(--secondary);
+            box-shadow: 0 0 20px rgba(0, 170, 210, 0.5);
+        }
+
+        .pipeline-stage.completed {
+            border: 2px solid var(--success);
+        }
+
+        .pipeline-stage.failed {
+            border: 2px solid var(--danger);
+        }
+
+        /* Pipeline Arrow */
+        .pipeline-arrow {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(0, 170, 210, 0.3), rgba(0, 170, 210, 0.8));
+            position: relative;
+            margin: 0 -20px;
+            z-index: 1;
+        }
+
+        .pipeline-arrow::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid rgba(0, 170, 210, 0.8);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        .pipeline-arrow.animated {
+            background: linear-gradient(90deg, 
+                rgba(0, 170, 210, 0.3) 0%,
+                rgba(0, 170, 210, 1) 50%,
+                rgba(0, 170, 210, 0.3) 100%);
+            background-size: 200% 100%;
+            animation: flow 2s linear infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-danger { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .badge-primary { background: rgba(0, 170, 210, 0.2); color: #00aad2; }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+
+        /* Progress Ring */
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        /* Feature Flow */
+        .feature-flow-item {
+            position: relative;
+            padding: 16px;
+            border-left: 3px solid var(--secondary);
+            margin-left: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-flow-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 24px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--secondary);
+            border: 2px solid #1e293b;
+        }
+
+        .feature-flow-item:hover {
+            background: rgba(0, 170, 210, 0.05);
+            border-left-color: var(--success);
+        }
+
+        .feature-flow-item:hover::before {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* Timeline Log */
+        .log-entry {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .log-entry.success { border-left-color: var(--success); }
+        .log-entry.warning { border-left-color: var(--warning); }
+        .log-entry.error { border-left-color: var(--danger); }
+
+        /* Metric Card */
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(0, 170, 210, 0.1);
+            transform: scale(1.05);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--secondary), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="glass-card mx-8 mt-8 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-project-diagram mr-3 text-blue-400"></i>
+                    DevOps Pipeline Viewer
+                </h1>
+                <p class="text-gray-400">FleetFlag 전체 개발 파이프라인 실시간 모니터링 (Requirements → Deployment → Monitoring)</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-400">Current Time</div>
+                <div id="current-time" class="text-xl font-bold text-blue-300"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="mx-8 mb-8 space-y-6">
+        <!-- Pipeline Overview KPI -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-green-400"></i>
+                Pipeline Overview
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Active Features</div>
+                    <div class="metric-value">23</div>
+                    <div class="text-xs text-gray-500 mt-1">/ 35 Total</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Avg Pipeline Time</div>
+                    <div class="metric-value">4.2h</div>
+                    <div class="text-xs text-gray-500 mt-1">Target: &lt;6h</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Success Rate</div>
+                    <div class="metric-value">94%</div>
+                    <div class="text-xs text-green-400 mt-1">▲ 3% vs Last Week</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">In Testing</div>
+                    <div class="metric-value">7</div>
+                    <div class="text-xs text-gray-500 mt-1">Shadow Mode</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Deployed Today</div>
+                    <div class="metric-value">8</div>
+                    <div class="text-xs text-gray-500 mt-1">7 Success / 1 Rollback</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6-Stage Pipeline Visualization -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-6">
+                <i class="fas fa-stream mr-2 text-purple-400"></i>
+                6-Stage DevOps Pipeline
+            </h2>
+
+            <!-- Pipeline Stages -->
+            <div class="flex items-center justify-between overflow-x-auto pb-4">
+                <!-- Stage 1: Requirements -->
+                <div class="pipeline-stage glass-card min-w-[180px] completed" data-stage="1">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">📋</div>
+                        <span class="badge badge-success">
+                            <i class="fas fa-check mr-1"></i>Stable
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">1. Requirements</h3>
+                    <p class="text-sm text-gray-400 mb-3">기획 및 요구사항 정의</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">12</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg Time:</span>
+                            <span class="font-bold text-green-400">1.2h</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">PLM Team</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-arrow animated"></div>
+
+                <!-- Stage 2: Development -->
+                <div class="pipeline-stage glass-card min-w-[180px] active" data-stage="2">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">💻</div>
+                        <span class="badge badge-primary pulse">
+                            <i class="fas fa-circle mr-1"></i>Active
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">2. Development</h3>
+                    <p class="text-sm text-gray-400 mb-3">코드 작성 및 CI/CD</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">8</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg Time:</span>
+                            <span class="font-bold text-yellow-400">0.8h</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">Dev Team</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-arrow animated"></div>
+
+                <!-- Stage 3: Testing -->
+                <div class="pipeline-stage glass-card min-w-[180px] active" data-stage="3">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">🧪</div>
+                        <span class="badge badge-warning pulse">
+                            <i class="fas fa-circle mr-1"></i>Testing
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">3. Testing</h3>
+                    <p class="text-sm text-gray-400 mb-3">Shadow Mode / HIL 검증</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">7</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg Time:</span>
+                            <span class="font-bold text-orange-400">1.5h</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">QA Team</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-arrow animated"></div>
+
+                <!-- Stage 4: Deployment -->
+                <div class="pipeline-stage glass-card min-w-[180px]" data-stage="4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">📦</div>
+                        <span class="badge badge-success">
+                            <i class="fas fa-check mr-1"></i>Ready
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">4. Deployment</h3>
+                    <p class="text-sm text-gray-400 mb-3">OTA 빌드 및 배포</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">5</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg Time:</span>
+                            <span class="font-bold text-green-400">0.3h</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">DevOps</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-arrow animated"></div>
+
+                <!-- Stage 5: Rollout -->
+                <div class="pipeline-stage glass-card min-w-[180px] active" data-stage="5">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">🚀</div>
+                        <span class="badge badge-primary pulse">
+                            <i class="fas fa-circle mr-1"></i>Rolling
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">5. Rollout</h3>
+                    <p class="text-sm text-gray-400 mb-3">Canary / A/B Test 출시</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">3</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg Time:</span>
+                            <span class="font-bold text-purple-400">0.5h</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">Release Mgr</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-arrow animated"></div>
+
+                <!-- Stage 6: Monitoring -->
+                <div class="pipeline-stage glass-card min-w-[180px] completed" data-stage="6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-2xl">📊</div>
+                        <span class="badge badge-success">
+                            <i class="fas fa-check mr-1"></i>Active
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">6. Monitoring</h3>
+                    <p class="text-sm text-gray-400 mb-3">실시간 분석 및 Kill Switch</p>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Active:</span>
+                            <span class="font-bold text-white">23</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Avg P95:</span>
+                            <span class="font-bold text-green-400">42ms</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Owner:</span>
+                            <span class="font-bold text-blue-400">Analytics</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Detail Info -->
+            <div id="stage-detail" class="mt-6 p-4 bg-black/30 rounded-lg" style="display: none;">
+                <h3 class="text-lg font-bold text-white mb-3">
+                    <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                    Stage Detail
+                </h3>
+                <div id="stage-detail-content"></div>
+            </div>
+        </div>
+
+        <!-- Feature Flow Tracking -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Live Feature Tracking -->
+            <div class="glass-card">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-rocket mr-2 text-green-400"></i>
+                    Live Feature Tracking
+                </h2>
+                <div class="space-y-4">
+                    <!-- ADAS Level 3 -->
+                    <div class="feature-flow-item">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-white">ADAS Level 3</h3>
+                            <span class="badge badge-primary">Stage 5 - Rollout</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge badge-danger text-xs">ASIL-D</span>
+                            <span class="text-xs text-gray-400">Owner: 자율주행팀</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 85%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-400">Rollout: 85% (106,250대)</span>
+                            <span class="text-green-400">✓ P95: 42ms</span>
+                        </div>
+                    </div>
+
+                    <!-- HDA2 고속도로 주행 -->
+                    <div class="feature-flow-item">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-white">HDA2 고속도로 주행</h3>
+                            <span class="badge badge-warning">Stage 3 - Testing</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge badge-warning text-xs">ASIL-C</span>
+                            <span class="text-xs text-gray-400">Owner: ADAS팀</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-2 rounded-full" style="width: 30%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-400">Shadow Mode: 30% (37,500대)</span>
+                            <span class="text-yellow-400">⚠ P95: 48ms</span>
+                        </div>
+                    </div>
+
+                    <!-- LCA (차선변경 보조) -->
+                    <div class="feature-flow-item">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-white">차선변경 보조 (LCA)</h3>
+                            <span class="badge badge-danger">Stage 6 - Kill Switch</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge badge-warning text-xs">ASIL-B</span>
+                            <span class="text-xs text-gray-400">Owner: 품질팀</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                            <div class="bg-gradient-to-r from-red-500 to-red-700 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-red-400">❌ Disabled (센서 퓨전 버그)</span>
+                            <span class="text-gray-500">Rollout: 0%</span>
+                        </div>
+                    </div>
+
+                    <!-- 배터리 충전 최적화 -->
+                    <div class="feature-flow-item">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-bold text-white">배터리 충전 최적화</h3>
+                            <span class="badge badge-success">Stage 6 - Monitoring</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="badge badge-success text-xs">ASIL-A</span>
+                            <span class="text-xs text-gray-400">Owner: 배터리팀</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2 mb-2">
+                            <div class="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full" style="width: 100%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-400">Rollout: 100% (125,000대)</span>
+                            <span class="text-green-400">✓ P95: 38ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Pipeline Log -->
+            <div class="glass-card">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    <i class="fas fa-terminal mr-2 text-cyan-400"></i>
+                    Real-time Pipeline Log
+                </h2>
+                <div id="pipeline-log" class="space-y-2 max-h-[500px] overflow-y-auto">
+                    <!-- Logs will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- System Integration -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-network-wired mr-2 text-indigo-400"></i>
+                System Integration
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-black/30 rounded-lg">
+                    <div class="text-3xl mb-2">📋</div>
+                    <div class="text-sm font-bold text-white">Codebeamer PLM</div>
+                    <div class="text-xs text-gray-400 mt-1">요구사항 추적</div>
+                    <span class="badge badge-success text-xs mt-2">Connected</span>
+                </div>
+                <div class="text-center p-4 bg-black/30 rounded-lg">
+                    <div class="text-3xl mb-2">🔧</div>
+                    <div class="text-sm font-bold text-white">GitLab CI/CD</div>
+                    <div class="text-xs text-gray-400 mt-1">코드 빌드 및 테스트</div>
+                    <span class="badge badge-success text-xs mt-2">Active</span>
+                </div>
+                <div class="text-center p-4 bg-black/30 rounded-lg">
+                    <div class="text-3xl mb-2">🧪</div>
+                    <div class="text-sm font-bold text-white">Shadow Mode</div>
+                    <div class="text-xs text-gray-400 mt-1">실시간 검증 (7대)</div>
+                    <span class="badge badge-warning text-xs mt-2">Testing</span>
+                </div>
+                <div class="text-center p-4 bg-black/30 rounded-lg">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="text-sm font-bold text-white">ClickHouse</div>
+                    <div class="text-xs text-gray-400 mt-1">텔레메트리 분석</div>
+                    <span class="badge badge-success text-xs mt-2">Synced</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-compass mr-2 text-yellow-400"></i>
+                관련 Mock-UI
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="07-end-to-end-simulator.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🎯</div>
+                    <div class="text-sm font-bold text-white">E2E 기능 제어</div>
+                </a>
+                <a href="03-codebeamer-traceability.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🔗</div>
+                    <div class="text-sm font-bold text-white">PLM 추적성</div>
+                </a>
+                <a href="02-safety-gatekeeper-dashboard.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🛡️</div>
+                    <div class="text-sm font-bold text-white">Safety Gatekeeper</div>
+                </a>
+                <a href="05-rollout-strategy-editor.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">⚙️</div>
+                    <div class="text-sm font-bold text-white">배포 전략</div>
+                </a>
+            </div>
+            <div class="mt-4 text-center">
+                <a href="index.html" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-home mr-2"></i>
+                    전체 Mock-UI 보기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Current Time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('ko-KR');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Pipeline Stage Click
+        const stages = document.querySelectorAll('.pipeline-stage');
+        const stageDetail = document.getElementById('stage-detail');
+        const stageDetailContent = document.getElementById('stage-detail-content');
+
+        const stageInfo = {
+            1: {
+                title: '1. Requirements (기획 및 요구사항 정의)',
+                description: 'PLM 시스템(Codebeamer)에서 요구사항을 정의하고 Feature 생성',
+                metrics: [
+                    { label: 'Active Features', value: '12개' },
+                    { label: 'Average Time', value: '1.2시간' },
+                    { label: 'Success Rate', value: '98%' },
+                ],
+                systems: ['Codebeamer PLM', 'Jira', 'Confluence'],
+                owner: 'PLM Team / 기획팀'
+            },
+            2: {
+                title: '2. Development (코드 작성 및 CI/CD)',
+                description: 'GitLab에서 Feature Flag 구현 및 CI/CD 파이프라인 자동 빌드',
+                metrics: [
+                    { label: 'Active Features', value: '8개' },
+                    { label: 'Average Time', value: '0.8시간' },
+                    { label: 'Build Success', value: '94%' },
+                ],
+                systems: ['GitLab CI/CD', 'Rust/Go Compiler', 'Docker Registry'],
+                owner: 'Dev Team / 개발팀'
+            },
+            3: {
+                title: '3. Testing (Shadow Mode / HIL 검증)',
+                description: 'Shadow Mode에서 실제 차량 데이터로 검증 (코드 실행 결과를 평가하지만 실제 출력은 하지 않음)',
+                metrics: [
+                    { label: 'Active Features', value: '7개' },
+                    { label: 'Average Time', value: '1.5시간' },
+                    { label: 'Test Coverage', value: '87%' },
+                ],
+                systems: ['Shadow Mode', 'HIL Simulator', 'Test Vehicle (7대)'],
+                owner: 'QA Team / 품질팀'
+            },
+            4: {
+                title: '4. Deployment (OTA 빌드 및 배포)',
+                description: 'Feature Flag를 OTA 패키지로 빌드하고 FleetFlag 서버에 배포',
+                metrics: [
+                    { label: 'Active Features', value: '5개' },
+                    { label: 'Average Time', value: '0.3시간' },
+                    { label: 'Deployment Success', value: '99%' },
+                ],
+                systems: ['OTA Builder', 'FleetFlag API', 'Azure AKS'],
+                owner: 'DevOps Team'
+            },
+            5: {
+                title: '5. Rollout (Canary / A/B Test 출시)',
+                description: 'Canary 배포로 점진적 출시 (예: 1% → 10% → 50% → 100%)',
+                metrics: [
+                    { label: 'Active Features', value: '3개' },
+                    { label: 'Average Time', value: '0.5시간' },
+                    { label: 'Rollout Success', value: '96%' },
+                ],
+                systems: ['FleetFlag Rollout Engine', 'Canary Strategy', 'A/B Test'],
+                owner: 'Release Manager'
+            },
+            6: {
+                title: '6. Monitoring (실시간 분석 및 Kill Switch)',
+                description: 'ClickHouse로 텔레메트리 수집 및 분석, 문제 발견 시 Kill Switch 발동',
+                metrics: [
+                    { label: 'Active Features', value: '23개' },
+                    { label: 'Avg P95 Latency', value: '42ms' },
+                    { label: 'Kill Switch Events', value: '1건 (LCA)' },
+                ],
+                systems: ['ClickHouse', 'Grafana', 'Kill Switch Controller'],
+                owner: 'Analytics Team / 품질팀'
+            }
+        };
+
+        stages.forEach(stage => {
+            stage.addEventListener('click', () => {
+                const stageNum = stage.dataset.stage;
+                const info = stageInfo[stageNum];
+
+                stageDetailContent.innerHTML = `
+                    <h4 class="text-lg font-bold text-white mb-2">${info.title}</h4>
+                    <p class="text-gray-400 mb-4">${info.description}</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        ${info.metrics.map(m => `
+                            <div class="bg-black/30 p-3 rounded-lg">
+                                <div class="text-xs text-gray-500">${m.label}</div>
+                                <div class="text-lg font-bold text-blue-300">${m.value}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-sm font-bold text-gray-400 mb-2">연동 시스템:</div>
+                        <div class="flex gap-2 flex-wrap">
+                            ${info.systems.map(s => `<span class="badge badge-primary">${s}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-bold text-gray-400">담당:</div>
+                        <div class="text-white">${info.owner}</div>
+                    </div>
+                `;
+
+                stageDetail.style.display = 'block';
+            });
+        });
+
+        // Real-time Pipeline Log
+        const logContainer = document.getElementById('pipeline-log');
+        const logMessages = [
+            { type: 'success', msg: '[14:32:15] ✓ ADAS Level 3 - Stage 5 Rollout 85% → 87% (+2,500대)' },
+            { type: 'warning', msg: '[14:31:47] ⚠ HDA2 고속도로 주행 - Shadow Mode 테스트 중 (P95: 48ms)' },
+            { type: 'success', msg: '[14:31:20] ✓ 배터리 충전 최적화 - Monitoring 정상 (P95: 38ms)' },
+            { type: 'error', msg: '[14:30:58] ❌ LCA 차선변경 - Kill Switch 발동 (센서 퓨전 버그 감지)' },
+            { type: 'success', msg: '[14:30:12] ✓ AI 주차 보조 - Rollout 65% 완료 (81,250대)' },
+            { type: 'success', msg: '[14:29:45] ✓ OTA 업데이트 v2.4 - Deployment 완료 (115,000대)' },
+            { type: 'warning', msg: '[14:29:18] ⚠ 에너지 회생 제어 - Shadow Mode 진입 (15% 테스트)' },
+            { type: 'success', msg: '[14:28:52] ✓ 음성 인식 개선 - Stage 6 Monitoring (P95: 35ms)' },
+        ];
+
+        function addLog(log) {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${log.type}`;
+            logEntry.textContent = log.msg;
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Keep only last 20 logs
+            if (logContainer.children.length > 20) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        // Initial logs
+        logMessages.forEach((log, index) => {
+            setTimeout(() => addLog(log), index * 500);
+        });
+
+        // Add new log every 5 seconds
+        setInterval(() => {
+            const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
+            addLog(randomLog);
+        }, 5000);
+    </script>
+</body>
+</html>
