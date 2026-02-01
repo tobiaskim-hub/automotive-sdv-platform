@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - System Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #f1f5f9;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Component Card */
+        .component-card {
+            position: relative;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .component-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 170, 210, 0.3);
+        }
+
+        .component-card.healthy {
+            border-color: var(--success);
+        }
+
+        .component-card.warning {
+            border-color: var(--warning);
+        }
+
+        .component-card.critical {
+            border-color: var(--danger);
+        }
+
+        /* Status Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .badge-danger { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .badge-primary { background: rgba(0, 170, 210, 0.2); color: #00aad2; }
+        .badge-purple { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+
+        /* Metric Card */
+        .metric-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(0, 170, 210, 0.1);
+            transform: scale(1.05);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--secondary), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 1s ease;
+        }
+
+        .progress-fill.success {
+            background: linear-gradient(90deg, var(--success), #059669);
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning), #d97706);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger), #991b1b);
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-indicator.online {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .status-indicator.offline {
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+        }
+
+        .status-indicator.warning {
+            background: var(--warning);
+            box-shadow: 0 0 10px var(--warning);
+        }
+
+        /* Log Entry */
+        .log-entry {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .log-entry.success { border-left-color: var(--success); }
+        .log-entry.warning { border-left-color: var(--warning); }
+        .log-entry.error { border-left-color: var(--danger); }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="glass-card mx-8 mt-8 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-tachometer-alt mr-3 text-blue-400"></i>
+                    System Monitoring Dashboard
+                </h1>
+                <p class="text-gray-400">Feature Flag System 전체 실시간 모니터링 (Factory → Feature Flag → SW Platform → Vehicle Fleet)</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-400">Current Time</div>
+                <div id="current-time" class="text-xl font-bold text-blue-300"></div>
+                <div class="mt-2">
+                    <span class="badge badge-success pulse">
+                        <i class="fas fa-circle mr-1"></i>All Systems Operational
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="mx-8 mb-8 space-y-6">
+        <!-- Overall KPI -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-green-400"></i>
+                Overall System Health
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">System Uptime</div>
+                    <div class="metric-value">99.9%</div>
+                    <div class="text-xs text-green-400 mt-1">30 Days</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Active Features</div>
+                    <div class="metric-value">23</div>
+                    <div class="text-xs text-gray-500 mt-1">/ 35 Total</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Online Vehicles</div>
+                    <div class="metric-value">123k</div>
+                    <div class="text-xs text-green-400 mt-1">98.5% Fleet</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Avg Latency</div>
+                    <div class="metric-value">42ms</div>
+                    <div class="text-xs text-green-400 mt-1">Target: &lt;50ms</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Incidents (24h)</div>
+                    <div class="metric-value">1</div>
+                    <div class="text-xs text-yellow-400 mt-1">LCA Kill Switch</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component Status Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 1. Factory/EOL -->
+            <div class="glass-card component-card healthy">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">
+                        <i class="fas fa-industry mr-2 text-orange-400"></i>
+                        🏭 Production (Factory/EOL)
+                    </h3>
+                    <div class="flex items-center">
+                        <span class="status-indicator online"></span>
+                        <span class="badge badge-success">Operational</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">일일 생산량 (Today)</span>
+                        <span class="font-bold text-white">2,847대</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">초기 프로비저닝 완료</span>
+                        <span class="font-bold text-green-400">2,847 / 2,847 (100%)</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">BoF (Bill of Features) 매핑</span>
+                        <span class="font-bold text-green-400">✓ 완료</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">VIN 등록 상태</span>
+                        <span class="font-bold text-green-400">✓ 정상</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Factory Provisioning Profile</span>
+                        <span class="font-bold text-white">v2.5.3</span>
+                    </div>
+                    <div class="progress-bar mt-3">
+                        <div class="progress-fill success" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Feature Flag System -->
+            <div class="glass-card component-card warning">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">
+                        <i class="fas fa-flag mr-2 text-blue-400"></i>
+                        🎯 Feature Flag System
+                    </h3>
+                    <div class="flex items-center">
+                        <span class="status-indicator warning"></span>
+                        <span class="badge badge-warning">1 Warning</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Variant & Feature Composition</span>
+                        <span class="font-bold text-white">35개 Feature 관리 중</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Bill of Features (BoF)</span>
+                        <span class="font-bold text-green-400">✓ 동기화 완료</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">VIN/Trim/Market Policy</span>
+                        <span class="font-bold text-green-400">87,500대 타겟</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Kill Switch 이벤트</span>
+                        <span class="font-bold text-yellow-400">⚠ 1건 (LCA 비활성화)</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">A/B 테스트 진행 중</span>
+                        <span class="font-bold text-white">3개 (HDA2, Boost, Summon)</span>
+                    </div>
+                    <div class="progress-bar mt-3">
+                        <div class="progress-fill warning" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. SW Platform (Codebeamer) -->
+            <div class="glass-card component-card healthy">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">
+                        <i class="fas fa-laptop-code mr-2 text-purple-400"></i>
+                        💻 SW Platform (Execution Substrate)
+                    </h3>
+                    <div class="flex items-center">
+                        <span class="status-indicator online"></span>
+                        <span class="badge badge-success">Healthy</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Codebeamer PLM 연동</span>
+                        <span class="font-bold text-green-400">✓ Connected</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">OS / Middleware</span>
+                        <span class="font-bold text-white">Linux RT v5.15</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Runtime / Safety</span>
+                        <span class="font-bold text-green-400">ASIL-D 검증 완료</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">[Local Gate] 평가 시간</span>
+                        <span class="font-bold text-green-400">2.1ms (평균)</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Enforce Flag Result</span>
+                        <span class="font-bold text-white">123,847대 정상</span>
+                    </div>
+                    <div class="progress-bar mt-3">
+                        <div class="progress-fill success" style="width: 98%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Vehicle Fleet -->
+            <div class="glass-card component-card healthy">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">
+                        <i class="fas fa-car mr-2 text-green-400"></i>
+                        🚗 Vehicle Fleet (Multiple VINs)
+                    </h3>
+                    <div class="flex items-center">
+                        <span class="status-indicator online"></span>
+                        <span class="badge badge-success">98.5% Online</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Total Fleet Size</span>
+                        <span class="font-bold text-white">125,000대</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Online Vehicles</span>
+                        <span class="font-bold text-green-400">123,847대 (98.5%)</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Receive OTA Policy</span>
+                        <span class="font-bold text-green-400">87,500대 (타겟)</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Send Telemetry / State</span>
+                        <span class="font-bold text-green-400">초당 2,847건</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">DTC Errors (24h)</span>
+                        <span class="font-bold text-yellow-400">127건 (0.1%)</span>
+                    </div>
+                    <div class="progress-bar mt-3">
+                        <div class="progress-fill success" style="width: 98.5%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTA Server Status -->
+        <div class="glass-card component-card healthy">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-white">
+                    <i class="fas fa-satellite-dish mr-2 text-cyan-400"></i>
+                    🌐 OTA Server (Policy Distribution)
+                </h3>
+                <div class="flex items-center">
+                    <span class="status-indicator online"></span>
+                    <span class="badge badge-success">Active</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">배포 진행률</div>
+                    <div class="metric-value text-2xl">70%</div>
+                    <div class="text-xs text-gray-500 mt-1">61,250 / 87,500</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">정책 전송 성공률</div>
+                    <div class="metric-value text-2xl">99.7%</div>
+                    <div class="text-xs text-green-400 mt-1">Target: &gt;99%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">평균 전송 시간</div>
+                    <div class="metric-value text-2xl">2.8s</div>
+                    <div class="text-xs text-green-400 mt-1">Target: &lt;3s</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">네트워크 대역폭</div>
+                    <div class="metric-value text-2xl">85%</div>
+                    <div class="text-xs text-gray-500 mt-1">LTE/5G</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-gray-400 text-sm mb-2">Retry 횟수</div>
+                    <div class="metric-value text-2xl">47</div>
+                    <div class="text-xs text-yellow-400 mt-1">0.05% Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Activity Log -->
+        <div class="glass-card">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-terminal mr-2 text-cyan-400"></i>
+                Real-time Activity Log
+            </h3>
+            <div id="activity-log" class="space-y-2 max-h-[400px] overflow-y-auto">
+                <!-- Logs will be added here dynamically -->
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Vehicle Fleet Status Chart -->
+            <div class="glass-card">
+                <h3 class="text-lg font-bold text-white mb-4">
+                    <i class="fas fa-chart-pie mr-2 text-green-400"></i>
+                    Vehicle Fleet Status (125,000대)
+                </h3>
+                <div class="chart-container">
+                    <canvas id="fleet-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Feature Distribution Chart -->
+            <div class="glass-card">
+                <h3 class="text-lg font-bold text-white mb-4">
+                    <i class="fas fa-chart-bar mr-2 text-blue-400"></i>
+                    Feature 활성화 현황 (Top 5)
+                </h3>
+                <div class="chart-container">
+                    <canvas id="feature-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Integration Flow -->
+        <div class="glass-card">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-network-wired mr-2 text-indigo-400"></i>
+                System Integration Flow
+            </h3>
+            <div class="grid grid-cols-5 gap-4 text-center">
+                <div class="p-4 bg-black/30 rounded-lg border border-orange-500/30">
+                    <div class="text-3xl mb-2">🏭</div>
+                    <div class="text-sm font-bold text-white">Factory/EOL</div>
+                    <div class="text-xs text-gray-400 mt-1">초기 프로비저닝</div>
+                    <span class="badge badge-success text-xs mt-2">✓ 2,847대</span>
+                </div>
+                <div class="p-4 bg-black/30 rounded-lg border border-blue-500/30">
+                    <div class="text-3xl mb-2">🎯</div>
+                    <div class="text-sm font-bold text-white">Feature Flag</div>
+                    <div class="text-xs text-gray-400 mt-1">정책 생성</div>
+                    <span class="badge badge-warning text-xs mt-2">⚠ 1 Event</span>
+                </div>
+                <div class="p-4 bg-black/30 rounded-lg border border-purple-500/30">
+                    <div class="text-3xl mb-2">💻</div>
+                    <div class="text-sm font-bold text-white">SW Platform</div>
+                    <div class="text-xs text-gray-400 mt-1">Local Gate</div>
+                    <span class="badge badge-success text-xs mt-2">✓ 2.1ms</span>
+                </div>
+                <div class="p-4 bg-black/30 rounded-lg border border-cyan-500/30">
+                    <div class="text-3xl mb-2">🌐</div>
+                    <div class="text-sm font-bold text-white">OTA Server</div>
+                    <div class="text-xs text-gray-400 mt-1">정책 배포</div>
+                    <span class="badge badge-primary text-xs mt-2">70%</span>
+                </div>
+                <div class="p-4 bg-black/30 rounded-lg border border-green-500/30">
+                    <div class="text-3xl mb-2">🚗</div>
+                    <div class="text-sm font-bold text-white">Vehicle Fleet</div>
+                    <div class="text-xs text-gray-400 mt-1">텔레메트리</div>
+                    <span class="badge badge-success text-xs mt-2">✓ 123k</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="glass-card">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-compass mr-2 text-yellow-400"></i>
+                관련 Mock-UI
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <a href="15-feature-control-physical-view.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🎯</div>
+                    <div class="text-sm font-bold text-white">E2E Physical View</div>
+                </a>
+                <a href="01-devops-pipeline-viewer.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">💻</div>
+                    <div class="text-sm font-bold text-white">DevOps Pipeline</div>
+                </a>
+                <a href="04-kill-switch-control-center.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">🛑</div>
+                    <div class="text-sm font-bold text-white">Kill Switch</div>
+                </a>
+                <a href="06-analytics-monitoring-dashboard.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
+                    <div class="text-2xl mb-2">📊</div>
+                    <div class="text-sm font-bold text-white">Analytics</div>
+                </a>
+            </div>
+            <div class="mt-4 text-center">
+                <a href="index.html" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition">
+                    <i class="fas fa-home mr-2"></i>
+                    전체 Mock-UI 보기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Current Time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('ko-KR');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Activity Log
+        const logContainer = document.getElementById('activity-log');
+        const logMessages = [
+            { type: 'success', msg: '[14:32:15] ✓ Factory - 2,847대 초기 프로비저닝 완료 (VIN 등록 완료)' },
+            { type: 'warning', msg: '[14:31:47] ⚠ Feature Flag System - LCA Kill Switch 발동 (센서 퓨전 버그 감지)' },
+            { type: 'success', msg: '[14:31:20] ✓ SW Platform - Codebeamer PLM 동기화 완료 (35개 Feature)' },
+            { type: 'success', msg: '[14:30:58] ✓ OTA Server - 정책 배포 70% 완료 (61,250 / 87,500대)' },
+            { type: 'success', msg: '[14:30:12] ✓ Vehicle Fleet - 텔레메트리 수신 정상 (초당 2,847건)' },
+            { type: 'success', msg: '[14:29:45] ✓ Feature Flag - ADAS Level 3 활성화율 85% 달성' },
+            { type: 'warning', msg: '[14:29:18] ⚠ Vehicle Fleet - DTC 에러 127건 감지 (0.1%)' },
+            { type: 'success', msg: '[14:28:52] ✓ Factory - BoF (Bill of Features) 매핑 완료' },
+            { type: 'success', msg: '[14:28:20] ✓ SW Platform - Local Gate 평가 시간 2.1ms (정상)' },
+            { type: 'success', msg: '[14:27:45] ✓ OTA Server - 네트워크 대역폭 85% (LTE/5G)' },
+        ];
+
+        function addLog(log) {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${log.type}`;
+            logEntry.textContent = log.msg;
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Keep only last 20 logs
+            if (logContainer.children.length > 20) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        // Initial logs
+        logMessages.forEach((log, index) => {
+            setTimeout(() => addLog(log), index * 500);
+        });
+
+        // Add new log every 5 seconds
+        setInterval(() => {
+            const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
+            addLog(randomLog);
+        }, 5000);
+
+        // Charts
+        // Fleet Status Chart
+        const fleetCtx = document.getElementById('fleet-chart').getContext('2d');
+        new Chart(fleetCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Online (정상)', 'Offline', 'Pending (대기)'],
+                datasets: [{
+                    data: [123847, 1153, 0],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(220, 38, 38, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(220, 38, 38, 1)',
+                        'rgba(245, 158, 11, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#f1f5f9'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Feature Distribution Chart
+        const featureCtx = document.getElementById('feature-chart').getContext('2d');
+        new Chart(featureCtx, {
+            type: 'bar',
+            data: {
+                labels: ['ADAS L3', 'HDA2', 'Boost', 'Matrix', 'eCall'],
+                datasets: [{
+                    label: '활성화율 (%)',
+                    data: [85, 30, 85, 95, 100],
+                    backgroundColor: [
+                        'rgba(0, 170, 210, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(99, 102, 241, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(0, 170, 210, 1)',
+                        'rgba(139, 92, 246, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(99, 102, 241, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            color: '#f1f5f9'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#f1f5f9'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
