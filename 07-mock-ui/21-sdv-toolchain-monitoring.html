@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - SDV Toolchain Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --indigo: #6366f1;
+            --pink: #ec4899;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+        }
+
+        .tool-node {
+            position: relative;
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        .tool-node:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0, 170, 210, 0.3);
+        }
+
+        .tool-node.status-active {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+        }
+
+        .tool-node.status-warning {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
+        }
+
+        .tool-node.status-error {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.1) 100%);
+        }
+
+        .tool-node.status-progress {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%);
+            animation: pulse-border 2s infinite;
+        }
+
+        .tool-node.status-inactive {
+            border-color: #64748b;
+            background: rgba(100, 116, 139, 0.1);
+            opacity: 0.6;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+
+        .compliance-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px solid;
+            z-index: 10;
+        }
+
+        .badge-iso {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            border-color: #6366f1;
+            color: white;
+        }
+
+        .badge-aspice {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            border-color: #db2777;
+            color: white;
+        }
+
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 24px;
+            margin: 0 8px;
+        }
+
+        .flow-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stage-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-active .status-indicator { background: #10b981; }
+        .status-warning .status-indicator { background: #f59e0b; }
+        .status-error .status-indicator { background: #dc2626; }
+        .status-progress .status-indicator { background: #3b82f6; }
+        .status-inactive .status-indicator { background: #64748b; }
+
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-toggle button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-toggle button.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .tool-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 8px;
+        }
+
+        .metric-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .log-entry {
+            padding: 8px 12px;
+            border-left: 3px solid;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-success { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-warning { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .log-error { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+        .log-info { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <!-- Header -->
+    <div class="glass-card p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-arrow-left"></i> 돌아가기
+                </a>
+                <div class="h-8 w-px bg-gray-600"></div>
+                <h1 class="text-2xl font-bold">
+                    <i class="fas fa-car-battery text-purple-400"></i>
+                    SDV Toolchain Monitoring Dashboard
+                </h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="view-toggle">
+                    <button id="view-flow" class="active">
+                        <i class="fas fa-stream"></i> Flow View
+                    </button>
+                    <button id="view-vmodel">
+                        <i class="fas fa-project-diagram"></i> V-Model
+                    </button>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <i class="fas fa-sync-alt fa-spin"></i> 실시간 모니터링
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Dashboard -->
+    <div class="glass-card p-6 mb-6">
+        <h3 class="text-lg font-bold mb-4">
+            <i class="fas fa-chart-line text-cyan-400"></i>
+            Toolchain Status Overview
+        </h3>
+        <div class="grid grid-cols-5 gap-4">
+            <div class="metric-card">
+                <div class="text-2xl font-bold text-green-400" id="tools-active">0</div>
+                <div class="text-xs text-gray-400 mt-1">Active Tools</div>
+            </div>
+            <div class="metric-card">
+                <div class="text-2xl font-bold text-blue-400" id="tools-progress">0</div>
+                <div class="text-xs text-gray-400 mt-1">In Progress</div>
+            </div>
+            <div class="metric-card">
+                <div class="text-2xl font-bold text-yellow-400" id="tools-warning">0</div>
+                <div class="text-xs text-gray-400 mt-1">Warnings</div>
+            </div>
+            <div class="metric-card">
+                <div class="text-2xl font-bold text-red-400" id="tools-error">0</div>
+                <div class="text-xs text-gray-400 mt-1">Errors</div>
+            </div>
+            <div class="metric-card">
+                <div class="text-2xl font-bold text-purple-400" id="compliance-rate">0%</div>
+                <div class="text-xs text-gray-400 mt-1">Compliance Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flow View (Default) -->
+    <div id="flow-view-container" class="glass-card p-8">
+        <!-- Stage 1: Requirements Management -->
+        <div class="mb-8">
+            <div class="stage-label">📋 Requirements Management</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="codebeamer">
+                    <div class="compliance-badge badge-aspice">ASPICE</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                        <i class="fas fa-clipboard-list text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Codebeamer</div>
+                    <div class="text-xs text-gray-400 mt-1">Requirements</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="tool-node status-active" data-tool="doors">
+                    <div class="compliance-badge badge-iso">ISO</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);">
+                        <i class="fas fa-door-open text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">DOORS NG</div>
+                    <div class="text-xs text-gray-400 mt-1">Traceability</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 2: Source Control & Build -->
+        <div class="mb-8">
+            <div class="stage-label">💻 Source Control & Build System</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="gitlab">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);">
+                        <i class="fab fa-gitlab text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">GitLab</div>
+                    <div class="text-xs text-gray-400 mt-1">SCM</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-progress" data-tool="cmake">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-cube text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">CMake</div>
+                    <div class="text-xs text-gray-400 mt-1">Build System</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="yocto">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                        <i class="fas fa-layer-group text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Yocto</div>
+                    <div class="text-xs text-gray-400 mt-1">Linux Build</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 3: Virtual Simulation (SiL/MiL) -->
+        <div class="mb-8">
+            <div class="stage-label">🖥️ Virtual Simulation (SiL/MiL)</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-progress" data-tool="matlab">
+                    <div class="compliance-badge badge-iso">ISO</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-project-diagram text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Matlab/Simulink</div>
+                    <div class="text-xs text-gray-400 mt-1">MiL Testing</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="canoe">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                        <i class="fas fa-network-wired text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Vector CANoe</div>
+                    <div class="text-xs text-gray-400 mt-1">SiL Testing</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="qemu">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #64748b 0%, #475569 100%);">
+                        <i class="fas fa-server text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">QEMU</div>
+                    <div class="text-xs text-gray-400 mt-1">Virtual ECU</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 4: HIL Testing -->
+        <div class="mb-8">
+            <div class="stage-label">🔌 Hardware-in-the-Loop (HIL) Testing</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="dspace">
+                    <div class="compliance-badge badge-iso">ISO</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">
+                        <i class="fas fa-microchip text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">dSPACE</div>
+                    <div class="text-xs text-gray-400 mt-1">HIL Platform</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-warning" data-tool="vector-hil">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                        <i class="fas fa-plug text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Vector HIL</div>
+                    <div class="text-xs text-gray-400 mt-1">Test Bench</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 5: Safety Analysis -->
+        <div class="mb-8">
+            <div class="stage-label">🛡️ Safety & Code Quality Analysis</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="polyspace">
+                    <div class="compliance-badge badge-iso">ISO</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                        <i class="fas fa-shield-alt text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Polyspace</div>
+                    <div class="text-xs text-gray-400 mt-1">Static Analysis</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="ldra">
+                    <div class="compliance-badge badge-aspice">ASPICE</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-check-double text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">LDRA</div>
+                    <div class="text-xs text-gray-400 mt-1">Code Coverage</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 6: CI/CD Integration -->
+        <div class="mb-8">
+            <div class="stage-label">🔄 CI/CD Integration</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="jenkins">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                        <i class="fas fa-hammer text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Jenkins</div>
+                    <div class="text-xs text-gray-400 mt-1">CI/CD Pipeline</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="docker">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        <i class="fab fa-docker text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Docker</div>
+                    <div class="text-xs text-gray-400 mt-1">Containerization</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 7: Vehicle Testing -->
+        <div class="mb-8">
+            <div class="stage-label">🚗 Vehicle Testing & Validation</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-progress" data-tool="vehicle-fleet">
+                    <div class="compliance-badge badge-iso">ISO</div>
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);">
+                        <i class="fas fa-car text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Real Vehicle Fleet</div>
+                    <div class="text-xs text-gray-400 mt-1">125K Vehicles</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow text-center mb-8">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+
+        <!-- Stage 8: OTA Deployment -->
+        <div class="mb-8">
+            <div class="stage-label">📡 OTA Deployment & Monitoring</div>
+            <div class="flex items-center justify-center gap-4 flex-wrap">
+                <div class="tool-node status-active" data-tool="azure-iot">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
+                        <i class="fab fa-microsoft text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Azure IoT Hub</div>
+                    <div class="text-xs text-gray-400 mt-1">OTA Platform</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="grafana">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Grafana</div>
+                    <div class="text-xs text-gray-400 mt-1">Monitoring</div>
+                    <div class="status-indicator"></div>
+                </div>
+                <div class="flow-arrow"><i class="fas fa-arrow-right"></i></div>
+                <div class="tool-node status-active" data-tool="splunk">
+                    <div class="tool-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        <i class="fas fa-database text-white"></i>
+                    </div>
+                    <div class="font-bold text-sm">Splunk</div>
+                    <div class="text-xs text-gray-400 mt-1">Log Analytics</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- V-Model View (Hidden by default) -->
+    <div id="vmodel-view-container" class="glass-card p-8 hidden">
+        <div class="text-center text-gray-400 py-20">
+            <i class="fas fa-project-diagram text-6xl mb-4"></i>
+            <p class="text-xl">V-Model 뷰는 구현 예정입니다.</p>
+            <p class="text-sm mt-2">18-v-model-devops-integration.html 참조</p>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="glass-card p-6 mt-6">
+        <h3 class="text-lg font-bold mb-4">
+            <i class="fas fa-terminal text-green-400"></i>
+            실시간 활동 로그
+            <span class="text-xs text-gray-400 ml-2">(최근 20개)</span>
+        </h3>
+        <div id="activity-log" class="space-y-2 max-h-64 overflow-y-auto">
+            <!-- Logs will be added here dynamically -->
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="tool-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold" id="modal-title">Tool Details</h3>
+                <button id="modal-close" class="text-gray-400 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-body">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tool data
+        const tools = {
+            codebeamer: {
+                name: 'Codebeamer',
+                category: 'Requirements Management',
+                status: 'active',
+                compliance: ['ASPICE CL3'],
+                version: 'v22.10',
+                url: 'https://codebeamer.internal/projects',
+                metrics: {
+                    requirements: 1247,
+                    traces: 3842,
+                    coverage: '94%'
+                },
+                logs: [
+                    '[14:32:15] ✓ Requirement REQ-1247 추가됨',
+                    '[14:30:02] ✓ Traceability 매트릭스 업데이트',
+                    '[14:28:45] ⚠ REQ-891 검증 대기 중'
+                ]
+            },
+            doors: {
+                name: 'DOORS NG',
+                category: 'Requirements Management',
+                status: 'active',
+                compliance: ['ISO 26262 ASIL-D'],
+                version: 'v7.0.2',
+                url: 'https://doors.internal',
+                metrics: {
+                    modules: 42,
+                    baselines: 18,
+                    changes: 127
+                },
+                logs: [
+                    '[14:31:20] ✓ Baseline BL-2024-Q1 생성',
+                    '[14:29:15] ✓ Change Request CR-547 승인',
+                    '[14:27:30] ℹ Module MOD-12 동기화 중'
+                ]
+            },
+            gitlab: {
+                name: 'GitLab',
+                category: 'Source Control',
+                status: 'active',
+                compliance: [],
+                version: 'v16.7',
+                url: 'https://gitlab.internal',
+                metrics: {
+                    commits: 47,
+                    branches: 23,
+                    mergeRequests: 12
+                },
+                logs: [
+                    '[14:33:45] ✓ Commit: feat/ADAS-L3-improvements',
+                    '[14:32:10] ✓ Merge Request !247 승인됨',
+                    '[14:30:55] ℹ Branch feature/autopilot 생성'
+                ]
+            },
+            cmake: {
+                name: 'CMake',
+                category: 'Build System',
+                status: 'progress',
+                compliance: [],
+                version: 'v3.27',
+                url: null,
+                metrics: {
+                    targets: 127,
+                    buildTime: '8m 23s',
+                    artifacts: 89
+                },
+                logs: [
+                    '[14:34:20] 🔄 Building target: libadas.so',
+                    '[14:33:50] ✓ CMake configuration complete',
+                    '[14:32:15] ℹ Scanning dependencies...'
+                ]
+            },
+            yocto: {
+                name: 'Yocto',
+                category: 'Build System',
+                status: 'active',
+                compliance: [],
+                version: 'v4.2 (Kirkstone)',
+                url: null,
+                metrics: {
+                    recipes: 2847,
+                    packages: 1523,
+                    imageSize: '847 MB'
+                },
+                logs: [
+                    '[14:35:10] ✓ Image build complete',
+                    '[14:28:30] ℹ Fetching recipe: systemd',
+                    '[14:15:00] 🔄 Building core-image-minimal'
+                ]
+            },
+            matlab: {
+                name: 'Matlab/Simulink',
+                category: 'Virtual Simulation',
+                status: 'progress',
+                compliance: ['ISO 26262 Tool Qualification'],
+                version: 'R2023b',
+                url: 'https://matlab.internal',
+                metrics: {
+                    models: 347,
+                    testCases: 1247,
+                    coverage: '87%'
+                },
+                logs: [
+                    '[14:36:20] 🔄 Simulating model: ADAS_Controller',
+                    '[14:35:45] ✓ Code generation complete',
+                    '[14:34:10] ℹ Running test suite: TC-ADAS-001'
+                ]
+            },
+            canoe: {
+                name: 'Vector CANoe',
+                category: 'Virtual Simulation',
+                status: 'active',
+                compliance: [],
+                version: 'v17.0',
+                url: null,
+                metrics: {
+                    testCases: 892,
+                    passRate: '96%',
+                    duration: '2h 47m'
+                },
+                logs: [
+                    '[14:37:15] ✓ Test case TC-CAN-047 통과',
+                    '[14:36:40] ✓ CAN 네트워크 시뮬레이션 완료',
+                    '[14:35:20] ℹ CAPL script 실행 중'
+                ]
+            },
+            qemu: {
+                name: 'QEMU',
+                category: 'Virtual Simulation',
+                status: 'active',
+                compliance: [],
+                version: 'v8.1',
+                url: null,
+                metrics: {
+                    instances: 24,
+                    cpuUsage: '47%',
+                    memory: '12.4 GB'
+                },
+                logs: [
+                    '[14:38:00] ✓ Virtual ECU instance vECU-12 시작',
+                    '[14:37:20] ℹ Booting Linux kernel 5.15',
+                    '[14:36:45] ✓ Network bridge 설정 완료'
+                ]
+            },
+            dspace: {
+                name: 'dSPACE',
+                category: 'HIL Testing',
+                status: 'active',
+                compliance: ['ISO 26262'],
+                version: 'v2023-A',
+                url: 'https://dspace.internal',
+                metrics: {
+                    testBenches: 8,
+                    runningTests: 23,
+                    passRate: '94%'
+                },
+                logs: [
+                    '[14:39:10] ✓ HIL Test Bench #3 테스트 완료',
+                    '[14:38:25] 🔄 Test: Emergency Braking 실행 중',
+                    '[14:37:40] ✓ Real-time model loaded'
+                ]
+            },
+            'vector-hil': {
+                name: 'Vector HIL',
+                category: 'HIL Testing',
+                status: 'warning',
+                compliance: [],
+                version: 'v2.8',
+                url: null,
+                metrics: {
+                    testBenches: 4,
+                    warnings: 3,
+                    uptime: '99.2%'
+                },
+                logs: [
+                    '[14:40:15] ⚠ Bench #2 센서 커넥션 불안정',
+                    '[14:39:30] ✓ Calibration data uploaded',
+                    '[14:38:50] ℹ Test suite TS-HIL-042 대기 중'
+                ]
+            },
+            polyspace: {
+                name: 'Polyspace',
+                category: 'Safety Analysis',
+                status: 'active',
+                compliance: ['ISO 26262'],
+                version: 'R2023b',
+                url: 'https://polyspace.internal',
+                metrics: {
+                    defects: 12,
+                    violations: 3,
+                    coverage: '92%'
+                },
+                logs: [
+                    '[14:41:20] ✓ Static analysis 완료: 0 red',
+                    '[14:40:35] ⚠ 12 orange defects detected',
+                    '[14:39:50] ℹ Analyzing module: brake_control.c'
+                ]
+            },
+            ldra: {
+                name: 'LDRA',
+                category: 'Safety Analysis',
+                status: 'active',
+                compliance: ['ASPICE', 'ISO 26262'],
+                version: 'v10.3',
+                url: null,
+                metrics: {
+                    codeCoverage: '94%',
+                    mcdc: '89%',
+                    violations: 8
+                },
+                logs: [
+                    '[14:42:10] ✓ MC/DC coverage: 89.2%',
+                    '[14:41:30] ✓ Unit test 실행 완료',
+                    '[14:40:45] ℹ Code review checklist 생성 중'
+                ]
+            },
+            jenkins: {
+                name: 'Jenkins',
+                category: 'CI/CD Integration',
+                status: 'active',
+                compliance: [],
+                version: 'v2.426',
+                url: 'https://jenkins.internal',
+                metrics: {
+                    builds: 47,
+                    successRate: '96%',
+                    avgTime: '12m'
+                },
+                logs: [
+                    '[14:43:15] ✓ Build #4523 완료',
+                    '[14:42:40] 🔄 Pipeline: SDV-ADAS-Main 실행 중',
+                    '[14:41:55] ✓ Webhook from GitLab received'
+                ]
+            },
+            docker: {
+                name: 'Docker',
+                category: 'CI/CD Integration',
+                status: 'active',
+                compliance: [],
+                version: 'v24.0',
+                url: null,
+                metrics: {
+                    images: 127,
+                    containers: 42,
+                    storage: '247 GB'
+                },
+                logs: [
+                    '[14:44:20] ✓ Image fleetflag:v2.5.3 push 완료',
+                    '[14:43:35] ✓ Container build 완료',
+                    '[14:42:50] ℹ Pulling base image: ubuntu:22.04'
+                ]
+            },
+            'vehicle-fleet': {
+                name: 'Real Vehicle Fleet',
+                category: 'Vehicle Testing',
+                status: 'progress',
+                compliance: ['ISO 26262'],
+                version: 'Shadow Mode',
+                url: 'https://fleet.internal',
+                metrics: {
+                    vehicles: 125000,
+                    testing: 3500,
+                    dataRate: '2.4 TB/day'
+                },
+                logs: [
+                    '[14:45:30] 🔄 Shadow mode test: 3,500 vehicles',
+                    '[14:44:45] ✓ Data collection: 127 GB',
+                    '[14:43:20] ℹ Feature Flag: ADAS-L3 enabled'
+                ]
+            },
+            'azure-iot': {
+                name: 'Azure IoT Hub',
+                category: 'OTA Deployment',
+                status: 'active',
+                compliance: [],
+                version: 'Standard Tier',
+                url: 'https://portal.azure.com',
+                metrics: {
+                    devices: 125000,
+                    messages: '847M/day',
+                    uptime: '99.99%'
+                },
+                logs: [
+                    '[14:46:40] ✓ OTA deployment: 23 vehicles',
+                    '[14:45:55] ✓ Device twin updated',
+                    '[14:44:30] ℹ Telemetry data synced'
+                ]
+            },
+            grafana: {
+                name: 'Grafana',
+                category: 'Monitoring',
+                status: 'active',
+                compliance: [],
+                version: 'v10.2',
+                url: 'https://grafana.internal',
+                metrics: {
+                    dashboards: 47,
+                    alerts: 12,
+                    dataPoints: '2.4M/sec'
+                },
+                logs: [
+                    '[14:47:50] ✓ Dashboard: Fleet Health 업데이트',
+                    '[14:47:10] ℹ Alert: High CPU 해결됨',
+                    '[14:46:25] ✓ Data source connected'
+                ]
+            },
+            splunk: {
+                name: 'Splunk',
+                category: 'Monitoring',
+                status: 'active',
+                compliance: [],
+                version: 'Enterprise 9.1',
+                url: 'https://splunk.internal',
+                metrics: {
+                    events: '2.4M/day',
+                    indexSize: '847 GB',
+                    searches: 247
+                },
+                logs: [
+                    '[14:48:55] ✓ Log ingestion: 127 GB',
+                    '[14:48:15] ✓ Search query completed',
+                    '[14:47:30] ℹ Index rotation scheduled'
+                ]
+            }
+        };
+
+        // Activity log
+        let activityLog = [];
+        const maxLogs = 20;
+
+        // Initialize
+        function init() {
+            updateKPI();
+            updateActivityLog();
+            setupEventListeners();
+            startSimulation();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // View toggle
+            document.getElementById('view-flow').addEventListener('click', () => switchView('flow'));
+            document.getElementById('view-vmodel').addEventListener('click', () => switchView('vmodel'));
+
+            // Tool nodes
+            document.querySelectorAll('.tool-node').forEach(node => {
+                node.addEventListener('click', () => {
+                    const toolId = node.getAttribute('data-tool');
+                    showToolModal(toolId);
+                });
+            });
+
+            // Modal close
+            document.getElementById('modal-close').addEventListener('click', closeModal);
+            document.getElementById('tool-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'tool-modal') closeModal();
+            });
+        }
+
+        // Switch view
+        function switchView(view) {
+            if (view === 'flow') {
+                document.getElementById('flow-view-container').classList.remove('hidden');
+                document.getElementById('vmodel-view-container').classList.add('hidden');
+                document.getElementById('view-flow').classList.add('active');
+                document.getElementById('view-vmodel').classList.remove('active');
+            } else {
+                document.getElementById('flow-view-container').classList.add('hidden');
+                document.getElementById('vmodel-view-container').classList.remove('hidden');
+                document.getElementById('view-flow').classList.remove('active');
+                document.getElementById('view-vmodel').classList.add('active');
+            }
+        }
+
+        // Update KPI
+        function updateKPI() {
+            let active = 0, progress = 0, warning = 0, error = 0, totalCompliance = 0, withCompliance = 0;
+
+            Object.values(tools).forEach(tool => {
+                if (tool.status === 'active') active++;
+                else if (tool.status === 'progress') progress++;
+                else if (tool.status === 'warning') warning++;
+                else if (tool.status === 'error') error++;
+
+                if (tool.compliance.length > 0) withCompliance++;
+            });
+
+            totalCompliance = Object.keys(tools).length;
+            const complianceRate = Math.round((withCompliance / totalCompliance) * 100);
+
+            document.getElementById('tools-active').textContent = active;
+            document.getElementById('tools-progress').textContent = progress;
+            document.getElementById('tools-warning').textContent = warning;
+            document.getElementById('tools-error').textContent = error;
+            document.getElementById('compliance-rate').textContent = complianceRate + '%';
+        }
+
+        // Add activity log entry
+        function addLogEntry(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const entry = {
+                timestamp: timestamp,
+                message: message,
+                type: type
+            };
+
+            activityLog.unshift(entry);
+            if (activityLog.length > maxLogs) {
+                activityLog.pop();
+            }
+
+            updateActivityLog();
+        }
+
+        // Update activity log display
+        function updateActivityLog() {
+            const logContainer = document.getElementById('activity-log');
+            logContainer.innerHTML = '';
+
+            activityLog.forEach(entry => {
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-entry log-${entry.type}`;
+                logDiv.textContent = `[${entry.timestamp}] ${entry.message}`;
+                logContainer.appendChild(logDiv);
+            });
+        }
+
+        // Show tool modal
+        function showToolModal(toolId) {
+            const tool = tools[toolId];
+            if (!tool) return;
+
+            document.getElementById('modal-title').innerHTML = `
+                <i class="fas fa-info-circle text-cyan-400"></i>
+                ${tool.name}
+            `;
+
+            const complianceBadges = tool.compliance.map(c => 
+                `<span class="inline-block px-3 py-1 rounded-full text-xs font-bold ${
+                    c.includes('ISO') ? 'bg-purple-500/20 text-purple-400' : 'bg-pink-500/20 text-pink-400'
+                }">${c}</span>`
+            ).join(' ');
+
+            const metricsHtml = Object.entries(tool.metrics).map(([key, value]) => `
+                <div class="metric-card">
+                    <div class="text-lg font-bold text-cyan-400">${value}</div>
+                    <div class="text-xs text-gray-400 uppercase">${key.replace(/([A-Z])/g, ' $1').trim()}</div>
+                </div>
+            `).join('');
+
+            const logsHtml = tool.logs.map(log => {
+                const logType = log.includes('✓') ? 'success' : log.includes('⚠') ? 'warning' : log.includes('✗') ? 'error' : 'info';
+                return `<div class="log-entry log-${logType}">${log}</div>`;
+            }).join('');
+
+            document.getElementById('modal-body').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-sm text-gray-400 mb-2">카테고리</div>
+                        <div class="text-lg">${tool.category}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400 mb-2">버전</div>
+                        <div class="text-lg">${tool.version}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400 mb-2">상태</div>
+                        <div class="text-lg capitalize">
+                            <span class="status-indicator"></span>
+                            ${tool.status}
+                        </div>
+                    </div>
+                    ${tool.compliance.length > 0 ? `
+                        <div>
+                            <div class="text-sm text-gray-400 mb-2">Compliance</div>
+                            <div class="space-x-2">${complianceBadges}</div>
+                        </div>
+                    ` : ''}
+                    ${tool.url ? `
+                        <div>
+                            <div class="text-sm text-gray-400 mb-2">URL</div>
+                            <a href="${tool.url}" class="text-cyan-400 hover:underline" target="_blank">
+                                ${tool.url} <i class="fas fa-external-link-alt text-xs"></i>
+                            </a>
+                        </div>
+                    ` : ''}
+                    <div>
+                        <div class="text-sm text-gray-400 mb-2">메트릭</div>
+                        <div class="grid grid-cols-3 gap-4">${metricsHtml}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400 mb-2">최근 활동</div>
+                        <div class="space-y-2">${logsHtml}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('tool-modal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('tool-modal').classList.remove('active');
+        }
+
+        // Start simulation
+        function startSimulation() {
+            // Simulate random log entries
+            const logMessages = [
+                { msg: '✓ Build #4523 완료 (Jenkins)', type: 'success' },
+                { msg: '✓ Test case TC-ADAS-047 통과 (CANoe)', type: 'success' },
+                { msg: '⚠ Bench #2 센서 커넥션 불안정 (Vector HIL)', type: 'warning' },
+                { msg: '✓ Static analysis 완료: 0 red (Polyspace)', type: 'success' },
+                { msg: 'ℹ Code review checklist 생성 중 (LDRA)', type: 'info' },
+                { msg: '✓ OTA deployment: 23 vehicles (Azure IoT)', type: 'success' },
+                { msg: '🔄 Simulating model: ADAS_Controller (Matlab)', type: 'info' },
+                { msg: '✓ Requirement REQ-1247 추가됨 (Codebeamer)', type: 'success' },
+                { msg: '✓ Merge Request !247 승인됨 (GitLab)', type: 'success' },
+                { msg: '✓ Image build complete (Yocto)', type: 'success' }
+            ];
+
+            setInterval(() => {
+                const randomLog = logMessages[Math.floor(Math.random() * logMessages.length)];
+                addLogEntry(randomLog.msg, randomLog.type);
+            }, 3000);
+        }
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
