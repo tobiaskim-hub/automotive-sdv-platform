@@ -439,10 +439,10 @@
                         
                         <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                             <div class="flex items-center gap-2">
-                                <i class="fas fa-won-sign text-red-400"></i>
-                                <span>예상 비용</span>
+                                <i class="fas fa-users text-red-400"></i>
+                                <span>고객 불편</span>
                             </div>
-                            <div class="text-2xl font-bold text-red-400">₩500억</div>
+                            <div class="text-2xl font-bold text-red-400">매우 높음</div>
                         </div>
                         
                         <div class="p-3 bg-red-900/20 rounded-lg border border-red-500/30">
@@ -468,9 +468,9 @@
                         </div>
                         
                         <div class="text-center p-3 bg-gray-800/50 rounded-lg">
-                            <div class="text-sm text-gray-400">비용 상세</div>
+                            <div class="text-sm text-gray-400">영향 범위</div>
                             <div class="text-xs text-gray-500 mt-1">
-                                125,000대 × ₩400,000 = ₩500억
+                                125,000대 전체 대상
                             </div>
                         </div>
                     </div>
@@ -494,10 +494,10 @@
                         
                         <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
                             <div class="flex items-center gap-2">
-                                <i class="fas fa-won-sign text-green-400"></i>
-                                <span>예상 비용</span>
+                                <i class="fas fa-smile text-green-400"></i>
+                                <span>고객 불편</span>
                             </div>
-                            <div class="text-2xl font-bold text-green-400">₩0</div>
+                            <div class="text-2xl font-bold text-green-400">최소화</div>
                         </div>
                         
                         <div class="p-3 bg-green-900/20 rounded-lg border border-green-500/30">
@@ -523,8 +523,8 @@
                         </div>
                         
                         <div class="text-center p-3 bg-green-900/20 rounded-lg border border-green-500/30">
-                            <div class="text-lg font-bold text-green-400">💰 절감 효과</div>
-                            <div class="counter mt-2" id="savings-counter">₩0</div>
+                            <div class="text-lg font-bold text-green-400">⚡ 효율성 개선</div>
+                            <div class="counter mt-2" id="efficiency-counter">0%</div>
                         </div>
                     </div>
                 </div>
@@ -539,8 +539,8 @@
                 </div>
                 <div class="text-center p-6 bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-lg border border-green-500/30">
                     <div class="text-4xl font-bold text-green-400 mb-2">100%</div>
-                    <div class="text-sm text-gray-400">비용 절감률</div>
-                    <div class="text-xs text-gray-500 mt-1">₩500억 → ₩0</div>
+                    <div class="text-sm text-gray-400">원격 제어율</div>
+                    <div class="text-xs text-gray-500 mt-1">서비스센터 방문 불필요</div>
                 </div>
                 <div class="text-center p-6 bg-gradient-to-br from-purple-900/30 to-purple-800/20 rounded-lg border border-purple-500/30">
                     <div class="text-4xl font-bold text-purple-400 mb-2">99.97%</div>
@@ -606,8 +606,8 @@
                         <div class="text-sm text-gray-400">총 소요 시간</div>
                     </div>
                     <div class="p-4 bg-green-900/20 rounded-lg border border-green-500/30">
-                        <div class="text-3xl font-bold text-green-400">₩500억</div>
-                        <div class="text-sm text-gray-400">절감 비용</div>
+                        <div class="text-3xl font-bold text-green-400">125k대</div>
+                        <div class="text-sm text-gray-400">원격 제어</div>
                     </div>
                     <div class="p-4 bg-green-900/20 rounded-lg border border-green-500/30">
                         <div class="text-3xl font-bold text-green-400">99.97%</div>
@@ -722,8 +722,8 @@
                     countdown.textContent = '✅ 완료!';
                     countdown.classList.add('text-green-400');
                     
-                    // Animate savings counter
-                    animateCounter('savings-counter', 0, 50000000000, 2000, '₩');
+                    // Animate efficiency counter
+                    animateCounter('efficiency-counter', 0, 99.98, 2000, '', '%');
 
                     // Reset button
                     setTimeout(() => {
@@ -736,7 +736,7 @@
         });
 
         // Counter Animation
-        function animateCounter(elementId, start, end, duration, prefix = '') {
+        function animateCounter(elementId, start, end, duration, prefix = '', suffix = '') {
             const element = document.getElementById(elementId);
             const range = end - start;
             const increment = range / (duration / 16);
@@ -749,10 +749,10 @@
                     clearInterval(timer);
                 }
                 
-                if (prefix === '₩') {
-                    element.textContent = prefix + Math.floor(current).toLocaleString();
+                if (suffix) {
+                    element.textContent = prefix + current.toFixed(2) + suffix;
                 } else {
-                    element.textContent = Math.floor(current).toLocaleString() + prefix;
+                    element.textContent = prefix + Math.floor(current).toLocaleString();
                 }
             }, 16);
         }
