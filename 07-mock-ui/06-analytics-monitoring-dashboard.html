@@ -546,15 +546,27 @@
 
         <!-- Geographical Distribution -->
         <div class="grid grid-cols-2 gap-8 mb-8">
-            <!-- Left: Map -->
+            <!-- Left: Regional Distribution Chart -->
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">
                     <i class="fas fa-map-marked-alt mr-2 text-red-600"></i>지역별 활성 차량 분포
                 </h2>
-                <div class="bg-gray-100 rounded-lg p-8 text-center" style="height: 400px;">
-                    <i class="fas fa-map text-gray-400 text-6xl mb-4"></i>
-                    <p class="text-gray-500">대한민국 히트맵 시각화</p>
-                    <p class="text-xs text-gray-400 mt-2">(실제 구현: Leaflet.js + Heatmap Layer)</p>
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="regionChart"></canvas>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mt-4 text-center">
+                    <div>
+                        <div class="text-2xl font-bold text-blue-600">34,521</div>
+                        <div class="text-xs text-gray-500">서울 (1위)</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-green-600">28,432</div>
+                        <div class="text-xs text-gray-500">경기 (2위)</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-purple-600">12,843</div>
+                        <div class="text-xs text-gray-500">부산 (3위)</div>
+                    </div>
                 </div>
             </div>
 
@@ -717,6 +729,86 @@
                         title: {
                             display: true,
                             text: 'Requests (K)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Region Distribution Chart
+        const ctxRegion = document.getElementById('regionChart').getContext('2d');
+        new Chart(ctxRegion, {
+            type: 'bar',
+            data: {
+                labels: ['서울', '경기', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '강원'],
+                datasets: [{
+                    label: '활성 차량 수',
+                    data: [34521, 28432, 12843, 8421, 7234, 5632, 4821, 3912, 2847, 2156],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(14, 165, 233, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(139, 92, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(59, 130, 246)',
+                        'rgb(34, 197, 94)',
+                        'rgb(168, 85, 247)',
+                        'rgb(249, 115, 22)',
+                        'rgb(239, 68, 68)',
+                        'rgb(14, 165, 233)',
+                        'rgb(245, 158, 11)',
+                        'rgb(16, 185, 129)',
+                        'rgb(99, 102, 241)',
+                        'rgb(139, 92, 246)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.x.toLocaleString() + '대';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '활성 차량 수'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000).toFixed(0) + 'k';
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '지역'
                         }
                     }
                 }
