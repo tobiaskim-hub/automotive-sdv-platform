@@ -6,6 +6,7 @@
     <title>FleetFlag - Toolchain Management Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         :root {
             --primary: #002c5f;
@@ -22,6 +23,8 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #f1f5f9;
             min-height: 100vh;
+            margin: 0;
+            padding: 20px;
         }
 
         .glass-card {
@@ -33,741 +36,704 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
 
-        /* Stage Card */
-        .stage-card {
+        #network-container {
+            width: 100%;
+            height: 800px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
             position: relative;
-            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .node-label {
+            font-size: 11px;
+            font-weight: 600;
+            fill: #fff;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
+
+        .node-stage {
+            cursor: move;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+        }
+
+        .node-tool {
             cursor: pointer;
-            min-height: 180px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
 
-        .stage-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 170, 210, 0.3);
+        .node-stage:hover, .node-tool:hover {
+            filter: drop-shadow(0 6px 12px rgba(0,170,210,0.6));
         }
 
-        .stage-card.active {
-            border: 2px solid var(--secondary);
-            box-shadow: 0 0 20px rgba(0, 170, 210, 0.5);
+        .link-stage {
+            stroke: #00aad2;
+            stroke-width: 4;
+            stroke-opacity: 0.6;
+            marker-end: url(#arrow-stage);
         }
 
-        /* Tool Badge */
-        .tool-badge {
+        .link-tool {
+            stroke: #94a3b8;
+            stroke-width: 2;
+            stroke-opacity: 0.4;
+            stroke-dasharray: 5,5;
+        }
+
+        .link-data {
+            stroke: #10b981;
+            stroke-width: 2;
+            stroke-opacity: 0.5;
+        }
+
+        .link:hover {
+            stroke-opacity: 1 !important;
+            stroke-width: 6 !important;
+        }
+
+        .particle {
+            fill: #fff;
+            opacity: 0.8;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1000;
+            border: 1px solid rgba(0, 170, 210, 0.5);
+            display: none;
+            max-width: 300px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .status-online {
+            background: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+        }
+
+        .status-offline {
+            background: rgba(220, 38, 38, 0.3);
+            color: #dc2626;
+        }
+
+        .legend-item {
             display: inline-flex;
             align-items: center;
-            padding: 6px 12px;
-            border-radius: 20px;
+            margin-right: 20px;
             font-size: 12px;
-            font-weight: 600;
-            margin: 4px;
-            transition: all 0.3s ease;
-            cursor: pointer;
         }
 
-        .tool-badge:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .tool-badge.connected {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            border: 1px solid #10b981;
-        }
-
-        .tool-badge.disconnected {
-            background: rgba(220, 38, 38, 0.2);
-            color: #dc2626;
-            border: 1px solid #dc2626;
-        }
-
-        .tool-badge.warning {
-            background: rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-            border: 1px solid #f59e0b;
-        }
-
-        /* Flow Arrow */
-        .flow-arrow {
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, rgba(0, 170, 210, 0.3), rgba(0, 170, 210, 0.8));
-            position: relative;
-            margin: 0 -20px;
-            z-index: 1;
-        }
-
-        .flow-arrow::after {
-            content: '';
-            position: absolute;
-            right: -8px;
-            top: -4px;
-            width: 0;
-            height: 0;
-            border-left: 8px solid rgba(0, 170, 210, 0.8);
-            border-top: 5px solid transparent;
-            border-bottom: 5px solid transparent;
-        }
-
-        .flow-arrow.animated {
-            background: linear-gradient(90deg, 
-                rgba(0, 170, 210, 0.3) 0%,
-                rgba(0, 170, 210, 1) 50%,
-                rgba(0, 170, 210, 0.3) 100%);
-            background-size: 200% 100%;
-            animation: flow 2s linear infinite;
-        }
-
-        @keyframes flow {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* Status Indicator */
-        .status-indicator {
-            width: 10px;
-            height: 10px;
+        .legend-icon {
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
+            margin-right: 8px;
         }
 
-        .status-indicator.online {
-            background: var(--success);
-            box-shadow: 0 0 8px var(--success);
-        }
-
-        .status-indicator.offline {
-            background: var(--danger);
-            box-shadow: 0 0 8px var(--danger);
-        }
-
-        .status-indicator.warning {
-            background: var(--warning);
-            box-shadow: 0 0 8px var(--warning);
-        }
-
-        /* Badge */
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .badge-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-        .badge-danger { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
-        .badge-primary { background: rgba(0, 170, 210, 0.2); color: #00aad2; }
-
-        /* Data Flow Item */
-        .data-flow-item {
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 3px solid var(--secondary);
-            border-radius: 4px;
-            margin: 8px 0;
+        .control-btn {
+            background: rgba(0, 170, 210, 0.2);
+            border: 1px solid rgba(0, 170, 210, 0.5);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #00aad2;
             font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 8px;
         }
 
-        /* Pulse Animation */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .pulse {
-            animation: pulse 2s ease-in-out infinite;
+        .control-btn:hover {
+            background: rgba(0, 170, 210, 0.4);
+            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="glass-card mx-8 mt-8 mb-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold text-white mb-2">
-                    <i class="fas fa-toolbox mr-3 text-blue-400"></i>
-                    Toolchain Management Dashboard
-                </h1>
-                <p class="text-gray-400">8단계 DevOps CI/CD 툴체인 현황 및 데이터 흐름 시각화</p>
-            </div>
-            <div class="text-right">
-                <div class="text-sm text-gray-400">Current Time</div>
-                <div id="current-time" class="text-xl font-bold text-blue-300"></div>
-                <div class="mt-2">
-                    <span class="badge badge-success pulse">
-                        <i class="fas fa-circle mr-1"></i>All Tools Connected
-                    </span>
+    <div class="max-w-[1800px] mx-auto">
+        <!-- Header -->
+        <div class="glass-card mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">
+                        <i class="fas fa-toolbox mr-3" style="color: var(--secondary);"></i>
+                        Toolchain Management Dashboard
+                    </h1>
+                    <p class="text-gray-400">8단계 DevOps CI/CD 파이프라인 실시간 모니터링 및 툴 간 데이터 흐름 시각화</p>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <div class="mx-8 mb-8 space-y-6">
-        <!-- Overall Toolchain Health -->
-        <div class="glass-card">
-            <h2 class="text-xl font-bold text-white mb-4">
-                <i class="fas fa-heartbeat mr-2 text-green-400"></i>
-                Overall Toolchain Health
-            </h2>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="text-center p-4 bg-black/30 rounded-lg">
-                    <div class="text-3xl font-bold text-green-400">23</div>
-                    <div class="text-xs text-gray-400 mt-1">Connected Tools</div>
-                    <span class="badge badge-success text-xs mt-2">✓ Online</span>
-                </div>
-                <div class="text-center p-4 bg-black/30 rounded-lg">
-                    <div class="text-3xl font-bold text-blue-400">8</div>
-                    <div class="text-xs text-gray-400 mt-1">Pipeline Stages</div>
-                    <span class="badge badge-primary text-xs mt-2">Active</span>
-                </div>
-                <div class="text-center p-4 bg-black/30 rounded-lg">
-                    <div class="text-3xl font-bold text-purple-400">142</div>
-                    <div class="text-xs text-gray-400 mt-1">Data Transfers (24h)</div>
-                    <span class="badge badge-primary text-xs mt-2">Normal</span>
-                </div>
-                <div class="text-center p-4 bg-black/30 rounded-lg">
-                    <div class="text-3xl font-bold text-yellow-400">2</div>
-                    <div class="text-xs text-gray-400 mt-1">Warnings</div>
-                    <span class="badge badge-warning text-xs mt-2">⚠ Check</span>
-                </div>
-                <div class="text-center p-4 bg-black/30 rounded-lg">
-                    <div class="text-3xl font-bold text-green-400">99.8%</div>
-                    <div class="text-xs text-gray-400 mt-1">Uptime (30d)</div>
-                    <span class="badge badge-success text-xs mt-2">Excellent</span>
+                <div class="text-right">
+                    <div class="text-sm text-gray-400">Last Updated</div>
+                    <div class="text-xl font-semibold text-blue-400" id="last-update">2분 전</div>
                 </div>
             </div>
         </div>
 
-        <!-- 8-Stage Toolchain Flow -->
-        <div class="glass-card">
-            <h2 class="text-xl font-bold text-white mb-6">
-                <i class="fas fa-project-diagram mr-2 text-purple-400"></i>
-                8-Stage CI/CD Pipeline
-            </h2>
-
-            <!-- Stage Flow -->
-            <div class="flex items-center justify-between overflow-x-auto pb-4 mb-6">
-                <!-- Stage 1: PLAN -->
-                <div class="stage-card glass-card min-w-[160px] active" data-stage="plan">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">📋</div>
-                        <h3 class="text-lg font-bold text-white">1. PLAN</h3>
-                        <p class="text-xs text-gray-400">기획 및 이슈 관리</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Confluence
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>JIRA
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 2: CODE -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="code">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">💻</div>
-                        <h3 class="text-lg font-bold text-white">2. CODE</h3>
-                        <p class="text-xs text-gray-400">소스 코드 관리</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Git
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>GitHub
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Bitbucket
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 3: BUILD -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="build">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">🔨</div>
-                        <h3 class="text-lg font-bold text-white">3. BUILD</h3>
-                        <p class="text-xs text-gray-400">빌드 및 컴파일</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Maven
-                        </span>
-                        <span class="tool-badge warning">
-                            <span class="status-indicator warning"></span>sbt
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Gradle
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 4: TEST -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="test">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">🧪</div>
-                        <h3 class="text-lg font-bold text-white">4. TEST</h3>
-                        <p class="text-xs text-gray-400">자동화 테스트</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Selenium
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>JUnit
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Robot
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Second Row -->
-            <div class="flex items-center justify-between overflow-x-auto pb-4">
-                <!-- Stage 5: RELEASE -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="release">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">🚀</div>
-                        <h3 class="text-lg font-bold text-white">5. RELEASE</h3>
-                        <p class="text-xs text-gray-400">릴리스 관리</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Jenkins
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>CodeShip
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 6: DEPLOY -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="deploy">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">📦</div>
-                        <h3 class="text-lg font-bold text-white">6. DEPLOY</h3>
-                        <p class="text-xs text-gray-400">배포 및 프로비저닝</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Docker
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>AWS
-                        </span>
-                        <span class="tool-badge warning">
-                            <span class="status-indicator warning"></span>Kubernetes
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 7: OPERATE -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="operate">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">⚙️</div>
-                        <h3 class="text-lg font-bold text-white">7. OPERATE</h3>
-                        <p class="text-xs text-gray-400">운영 및 관리</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Chef
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Ansible
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flow-arrow animated"></div>
-
-                <!-- Stage 8: MONITOR -->
-                <div class="stage-card glass-card min-w-[160px]" data-stage="monitor">
-                    <div class="text-center mb-3">
-                        <div class="text-3xl mb-2">📊</div>
-                        <h3 class="text-lg font-bold text-white">8. MONITOR</h3>
-                        <p class="text-xs text-gray-400">모니터링 및 알림</p>
-                    </div>
-                    <div class="flex flex-wrap justify-center">
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Nagios
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Splunk
-                        </span>
-                        <span class="tool-badge connected">
-                            <span class="status-indicator online"></span>Grafana
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Data Flow Details -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Left: Data Flow Timeline -->
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
             <div class="glass-card">
-                <h3 class="text-xl font-bold text-white mb-4">
-                    <i class="fas fa-exchange-alt mr-2 text-cyan-400"></i>
-                    툴 간 데이터 흐름
-                </h3>
-                <div class="space-y-3">
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">PLAN → CODE</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Confluence/JIRA → GitHub: Requirements, User Stories (47 transfers/day)
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-gray-400 text-sm mb-1">총 툴 수</div>
+                        <div class="text-3xl font-bold text-blue-400">23</div>
+                        <div class="text-green-400 text-xs mt-1">
+                            <i class="fas fa-check-circle"></i> 21 Online
                         </div>
                     </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">CODE → BUILD</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            GitHub → Maven/Gradle: Source Code, Commits (124 builds/day)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">BUILD → TEST</span>
-                            <span class="badge badge-warning">Warning</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Maven → Selenium/JUnit: Artifacts, Binaries (89 test runs/day, 2 failures)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">TEST → RELEASE</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Selenium → Jenkins: Test Results, Coverage (94.2% pass rate)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">RELEASE → DEPLOY</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Jenkins → Docker/AWS: Release Packages (23 deployments/week)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">DEPLOY → OPERATE</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Docker → Ansible: Deployment Logs, Configs (15 updates/week)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">OPERATE → MONITOR</span>
-                            <span class="badge badge-success">Active</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Ansible → Grafana/Splunk: System Metrics, Logs (2.4M events/day)
-                        </div>
-                    </div>
-
-                    <div class="data-flow-item">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-bold text-white">MONITOR → PLAN</span>
-                            <span class="badge badge-primary">Feedback</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Grafana → JIRA: Feedback, Incidents (12 issues created/week)
-                        </div>
-                    </div>
+                    <i class="fas fa-tools text-5xl text-blue-400 opacity-20"></i>
                 </div>
             </div>
 
-            <!-- Right: Tool Status Details -->
             <div class="glass-card">
-                <h3 class="text-xl font-bold text-white mb-4">
-                    <i class="fas fa-list mr-2 text-yellow-400"></i>
-                    Tool Status Details
-                </h3>
-                <div class="space-y-2 max-h-[600px] overflow-y-auto">
-                    <!-- PLAN Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Confluence</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: PLAN | Last Sync: 2m ago | Documents: 1,247
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-gray-400 text-sm mb-1">파이프라인 단계</div>
+                        <div class="text-3xl font-bold text-purple-400">8</div>
+                        <div class="text-blue-400 text-xs mt-1">
+                            <i class="fas fa-infinity"></i> Continuous Loop
                         </div>
                     </div>
+                    <i class="fas fa-project-diagram text-5xl text-purple-400 opacity-20"></i>
+                </div>
+            </div>
 
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">JIRA</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: PLAN | Last Sync: 1m ago | Open Issues: 423
+            <div class="glass-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-gray-400 text-sm mb-1">데이터 전송 (24h)</div>
+                        <div class="text-3xl font-bold text-green-400">142</div>
+                        <div class="text-green-400 text-xs mt-1">
+                            <i class="fas fa-arrow-up"></i> +12 vs 어제
                         </div>
                     </div>
+                    <i class="fas fa-exchange-alt text-5xl text-green-400 opacity-20"></i>
+                </div>
+            </div>
 
-                    <!-- CODE Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">GitHub</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: CODE | Last Commit: 5m ago | Repositories: 87
+            <div class="glass-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-gray-400 text-sm mb-1">경고/오류</div>
+                        <div class="text-3xl font-bold text-yellow-400">2</div>
+                        <div class="text-yellow-400 text-xs mt-1">
+                            <i class="fas fa-exclamation-triangle"></i> sbt, K8s
                         </div>
                     </div>
-
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Bitbucket</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: CODE | Last Commit: 12m ago | Repositories: 34
-                        </div>
-                    </div>
-
-                    <!-- BUILD Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Maven</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: BUILD | Last Build: 8m ago | Success Rate: 96.3%
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator warning"></span>
-                                <span class="font-bold text-white">sbt</span>
-                            </div>
-                            <span class="badge badge-warning">Warning</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: BUILD | Last Build: 45m ago | High Memory Usage (85%)
-                        </div>
-                    </div>
-
-                    <!-- TEST Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Selenium</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: TEST | Last Run: 10m ago | Pass Rate: 94.2%
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">JUnit</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: TEST | Last Run: 8m ago | Tests: 2,847 (Pass: 2,683)
-                        </div>
-                    </div>
-
-                    <!-- RELEASE Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Jenkins</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: RELEASE | Active Jobs: 12 | Queue: 3
-                        </div>
-                    </div>
-
-                    <!-- DEPLOY Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Docker</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: DEPLOY | Containers: 142 | Images: 87
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator warning"></span>
-                                <span class="font-bold text-white">Kubernetes</span>
-                            </div>
-                            <span class="badge badge-warning">Warning</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: DEPLOY | Pods: 87 | 3 Pods Pending Restart
-                        </div>
-                    </div>
-
-                    <!-- OPERATE Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Ansible</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: OPERATE | Playbooks: 34 | Last Run: 2h ago
-                        </div>
-                    </div>
-
-                    <!-- MONITOR Tools -->
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Grafana</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: MONITOR | Dashboards: 23 | Alerts: 2 Active
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-black/30 rounded-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <span class="status-indicator online"></span>
-                                <span class="font-bold text-white">Splunk</span>
-                            </div>
-                            <span class="badge badge-success">Online</span>
-                        </div>
-                        <div class="text-xs text-gray-400">
-                            Stage: MONITOR | Events: 2.4M/day | Storage: 847GB
-                        </div>
-                    </div>
+                    <i class="fas fa-exclamation-circle text-5xl text-yellow-400 opacity-20"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Navigation -->
-        <div class="glass-card">
-            <h2 class="text-xl font-bold text-white mb-4">
-                <i class="fas fa-compass mr-2 text-yellow-400"></i>
-                관련 Mock-UI
-            </h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="01-devops-pipeline-viewer.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
-                    <div class="text-2xl mb-2">💻</div>
-                    <div class="text-sm font-bold text-white">DevOps Pipeline</div>
-                </a>
-                <a href="16-system-monitoring-dashboard.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
-                    <div class="text-2xl mb-2">📊</div>
-                    <div class="text-sm font-bold text-white">System Monitoring</div>
-                </a>
-                <a href="08-system-integration-map.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
-                    <div class="text-2xl mb-2">🔗</div>
-                    <div class="text-sm font-bold text-white">System Integration</div>
-                </a>
-                <a href="03-codebeamer-traceability.html" class="block p-4 bg-black/30 hover:bg-black/50 rounded-lg transition text-center">
-                    <div class="text-2xl mb-2">🔍</div>
-                    <div class="text-sm font-bold text-white">Traceability</div>
-                </a>
+        <!-- Network Visualization -->
+        <div class="glass-card mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">
+                    <i class="fas fa-network-wired mr-2"></i>
+                    DevOps Toolchain Network (Infinity Loop)
+                </h2>
+                <div>
+                    <button class="control-btn" onclick="resetSimulation()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                    <button class="control-btn" onclick="toggleAnimation()">
+                        <i class="fas fa-play"></i> Animation
+                    </button>
+                    <button class="control-btn" onclick="fitView()">
+                        <i class="fas fa-expand"></i> Fit View
+                    </button>
+                </div>
             </div>
-            <div class="mt-4 text-center">
-                <a href="index.html" class="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition">
-                    <i class="fas fa-home mr-2"></i>
-                    전체 Mock-UI 보기
-                </a>
+
+            <div id="network-container"></div>
+
+            <!-- Legend -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="flex flex-wrap items-center">
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);"></div>
+                        <span>DevOps Stage (8)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: linear-gradient(135deg, #10b981, #059669);"></div>
+                        <span>Tool (23)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 4px; background: #00aad2; margin-right: 8px;"></div>
+                        <span>Stage Flow</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 2px; background: #10b981; margin-right: 8px;"></div>
+                        <span>Data Transfer</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 30px; height: 2px; background: #94a3b8; margin-right: 8px; border-top: 2px dashed;"></div>
+                        <span>Tool Link</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
     <script>
-        // Current Time
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('current-time').textContent = now.toLocaleTimeString('ko-KR');
+        // Data Structure
+        const stages = [
+            { id: 'PLAN', name: 'PLAN', icon: '📋', color: '#8b5cf6', tools: ['Confluence', 'JIRA'] },
+            { id: 'CODE', name: 'CODE', icon: '💻', color: '#6366f1', tools: ['Git', 'GitHub', 'Bitbucket'] },
+            { id: 'BUILD', name: 'BUILD', icon: '🔨', color: '#3b82f6', tools: ['Maven', 'sbt', 'Gradle'] },
+            { id: 'TEST', name: 'TEST', icon: '🧪', color: '#0ea5e9', tools: ['Selenium', 'JUnit', 'Robot'] },
+            { id: 'RELEASE', name: 'RELEASE', icon: '🚀', color: '#06b6d4', tools: ['Jenkins', 'CodeShip'] },
+            { id: 'DEPLOY', name: 'DEPLOY', icon: '📦', color: '#14b8a6', tools: ['Docker', 'AWS', 'Kubernetes'] },
+            { id: 'OPERATE', name: 'OPERATE', icon: '⚙️', color: '#10b981', tools: ['Chef', 'Ansible'] },
+            { id: 'MONITOR', name: 'MONITOR', icon: '📊', color: '#059669', tools: ['Nagios', 'Splunk', 'Grafana'] }
+        ];
+
+        const toolStatus = {
+            'Confluence': { status: 'online', lastSync: '2m ago', rate: '100%' },
+            'JIRA': { status: 'online', lastSync: '1m ago', rate: '100%' },
+            'Git': { status: 'online', lastSync: '30s ago', rate: '100%' },
+            'GitHub': { status: 'online', lastSync: '5m ago', rate: '99.8%' },
+            'Bitbucket': { status: 'online', lastSync: '3m ago', rate: '100%' },
+            'Maven': { status: 'online', lastSync: '8m ago', rate: '96.3%' },
+            'sbt': { status: 'warning', lastSync: '45m ago', rate: '85%', warning: 'High Memory (85%)' },
+            'Gradle': { status: 'online', lastSync: '12m ago', rate: '98.1%' },
+            'Selenium': { status: 'online', lastSync: '6m ago', rate: '94.2%' },
+            'JUnit': { status: 'online', lastSync: '4m ago', rate: '100%' },
+            'Robot': { status: 'online', lastSync: '9m ago', rate: '97.5%' },
+            'Jenkins': { status: 'online', lastSync: '2m ago', rate: '99.6%' },
+            'CodeShip': { status: 'online', lastSync: '7m ago', rate: '98.9%' },
+            'Docker': { status: 'online', lastSync: '1m ago', rate: '100%' },
+            'AWS': { status: 'online', lastSync: '30s ago', rate: '99.9%' },
+            'Kubernetes': { status: 'warning', lastSync: '15m ago', rate: '87%', warning: '3 Pods Pending Restart' },
+            'Chef': { status: 'online', lastSync: '20m ago', rate: '100%' },
+            'Ansible': { status: 'online', lastSync: '18m ago', rate: '99.2%' },
+            'Nagios': { status: 'online', lastSync: '5m ago', rate: '100%' },
+            'Splunk': { status: 'online', lastSync: '1m ago', rate: '99.8%' },
+            'Grafana': { status: 'online', lastSync: '2m ago', rate: '100%' }
+        };
+
+        const dataFlows = [
+            { source: 'PLAN', target: 'CODE', label: '47 Requirements', rate: '47/day' },
+            { source: 'CODE', target: 'BUILD', label: '124 Commits', rate: '124/day' },
+            { source: 'BUILD', target: 'TEST', label: '89 Artifacts', rate: '89/day' },
+            { source: 'TEST', target: 'RELEASE', label: '84 Pass (94.2%)', rate: '94.2%' },
+            { source: 'RELEASE', target: 'DEPLOY', label: '23 Deployments', rate: '23/week' },
+            { source: 'DEPLOY', target: 'OPERATE', label: '15 Updates', rate: '15/week' },
+            { source: 'OPERATE', target: 'MONITOR', label: '2.4M Events', rate: '2.4M/day' },
+            { source: 'MONITOR', target: 'PLAN', label: '12 Incidents', rate: '12/week' }
+        ];
+
+        // Create Nodes
+        const nodes = [];
+        const links = [];
+
+        // Add Stage Nodes (Infinity Loop positions)
+        const centerX = 600;
+        const centerY = 400;
+        const radiusX = 250;
+        const radiusY = 180;
+
+        stages.forEach((stage, i) => {
+            const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
+            let x, y;
+            
+            // Infinity Loop (∞) positioning
+            if (i < 4) {
+                // Left loop
+                x = centerX - radiusX + radiusX * Math.cos(angle * 2);
+                y = centerY + radiusY * Math.sin(angle * 2);
+            } else {
+                // Right loop
+                x = centerX + radiusX + radiusX * Math.cos((angle + Math.PI) * 2);
+                y = centerY + radiusY * Math.sin((angle + Math.PI) * 2);
+            }
+
+            nodes.push({
+                id: stage.id,
+                name: stage.name,
+                icon: stage.icon,
+                color: stage.color,
+                type: 'stage',
+                tools: stage.tools,
+                x: x,
+                y: y,
+                fx: x, // Fix initial position
+                fy: y
+            });
+        });
+
+        // Add Tool Nodes (around each stage)
+        stages.forEach((stage, stageIdx) => {
+            const stageNode = nodes.find(n => n.id === stage.id);
+            stage.tools.forEach((tool, toolIdx) => {
+                const angleOffset = (toolIdx - (stage.tools.length - 1) / 2) * 0.5;
+                const stageAngle = (stageIdx / 8) * 2 * Math.PI - Math.PI / 2;
+                const toolAngle = stageAngle + angleOffset;
+                const distance = 120;
+
+                let x, y;
+                if (stageIdx < 4) {
+                    x = stageNode.x + distance * Math.cos(toolAngle * 2);
+                    y = stageNode.y + distance * Math.sin(toolAngle * 2);
+                } else {
+                    x = stageNode.x + distance * Math.cos((toolAngle + Math.PI) * 2);
+                    y = stageNode.y + distance * Math.sin((toolAngle + Math.PI) * 2);
+                }
+
+                nodes.push({
+                    id: tool,
+                    name: tool,
+                    type: 'tool',
+                    stage: stage.id,
+                    status: toolStatus[tool],
+                    x: x,
+                    y: y
+                });
+
+                // Link tool to stage
+                links.push({
+                    source: stage.id,
+                    target: tool,
+                    type: 'tool-link'
+                });
+            });
+        });
+
+        // Add Stage Flow Links
+        dataFlows.forEach(flow => {
+            links.push({
+                source: flow.source,
+                target: flow.target,
+                type: 'stage-flow',
+                label: flow.label,
+                rate: flow.rate
+            });
+        });
+
+        // Add inter-tool data transfer links (examples)
+        const toolDataFlows = [
+            { source: 'JIRA', target: 'GitHub', label: 'Issue Sync' },
+            { source: 'GitHub', target: 'Jenkins', label: 'Webhook' },
+            { source: 'Maven', target: 'Selenium', label: 'Test Artifacts' },
+            { source: 'Docker', target: 'Kubernetes', label: 'Container Deploy' },
+            { source: 'Grafana', target: 'JIRA', label: 'Alert Creation' }
+        ];
+
+        toolDataFlows.forEach(flow => {
+            links.push({
+                source: flow.source,
+                target: flow.target,
+                type: 'data-flow',
+                label: flow.label
+            });
+        });
+
+        // D3.js Force Simulation
+        const container = d3.select('#network-container');
+        const width = container.node().getBoundingClientRect().width;
+        const height = 800;
+
+        const svg = container.append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // Define arrow markers
+        svg.append('defs').selectAll('marker')
+            .data(['arrow-stage'])
+            .enter().append('marker')
+            .attr('id', d => d)
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 50)
+            .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M0,-5L10,0L0,5')
+            .attr('fill', '#00aad2');
+
+        // Zoom behavior
+        const g = svg.append('g');
+        const zoom = d3.zoom()
+            .scaleExtent([0.3, 3])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+        svg.call(zoom);
+
+        // Force Simulation
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links)
+                .id(d => d.id)
+                .distance(d => d.type === 'tool-link' ? 80 : 150)
+                .strength(d => d.type === 'tool-link' ? 0.5 : 0.3))
+            .force('charge', d3.forceManyBody().strength(-400))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(d => d.type === 'stage' ? 50 : 35))
+            .alphaDecay(0.02);
+
+        // Draw Links
+        const link = g.append('g')
+            .selectAll('line')
+            .data(links)
+            .enter().append('line')
+            .attr('class', d => `link link-${d.type}`)
+            .on('mouseover', showLinkTooltip)
+            .on('mouseout', hideTooltip);
+
+        // Draw Nodes
+        const node = g.append('g')
+            .selectAll('g')
+            .data(nodes)
+            .enter().append('g')
+            .attr('class', d => d.type === 'stage' ? 'node-stage' : 'node-tool')
+            .call(d3.drag()
+                .on('start', dragStarted)
+                .on('drag', dragged)
+                .on('end', dragEnded))
+            .on('click', nodeClicked)
+            .on('mouseover', showNodeTooltip)
+            .on('mouseout', hideTooltip);
+
+        // Stage Nodes
+        node.filter(d => d.type === 'stage')
+            .append('circle')
+            .attr('r', 40)
+            .attr('fill', d => d.color)
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 3);
+
+        node.filter(d => d.type === 'stage')
+            .append('text')
+            .attr('class', 'node-label')
+            .attr('dy', -45)
+            .style('font-size', '13px')
+            .text(d => d.name);
+
+        node.filter(d => d.type === 'stage')
+            .append('text')
+            .attr('dy', 8)
+            .style('font-size', '28px')
+            .style('text-anchor', 'middle')
+            .text(d => d.icon);
+
+        // Tool Nodes
+        node.filter(d => d.type === 'tool')
+            .append('circle')
+            .attr('r', 25)
+            .attr('fill', d => {
+                if (d.status.status === 'warning') return '#f59e0b';
+                if (d.status.status === 'offline') return '#dc2626';
+                return '#10b981';
+            })
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2);
+
+        node.filter(d => d.type === 'tool')
+            .append('text')
+            .attr('class', 'node-label')
+            .attr('dy', 35)
+            .style('font-size', '10px')
+            .text(d => d.name);
+
+        // Tooltip
+        const tooltip = d3.select('#tooltip');
+
+        function showNodeTooltip(event, d) {
+            if (d.type === 'stage') {
+                tooltip.html(`
+                    <strong>${d.icon} ${d.name}</strong><br>
+                    <div class="mt-2">
+                        <div class="text-xs text-gray-400">Connected Tools (${d.tools.length})</div>
+                        ${d.tools.map(t => `
+                            <div class="mt-1">
+                                <span class="status-badge status-${toolStatus[t].status}">
+                                    ${t}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `);
+            } else {
+                const status = d.status;
+                tooltip.html(`
+                    <strong>${d.name}</strong>
+                    <span class="status-badge status-${status.status}">${status.status.toUpperCase()}</span><br>
+                    <div class="mt-2 text-xs">
+                        <div><i class="fas fa-clock"></i> Last Sync: ${status.lastSync}</div>
+                        <div><i class="fas fa-chart-line"></i> Success Rate: ${status.rate}</div>
+                        ${status.warning ? `<div class="text-yellow-400 mt-1"><i class="fas fa-exclamation-triangle"></i> ${status.warning}</div>` : ''}
+                    </div>
+                `);
+            }
+            tooltip.style('display', 'block')
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 10) + 'px');
         }
-        setInterval(updateTime, 1000);
-        updateTime();
 
-        // Stage Click
-        const stages = document.querySelectorAll('.stage-card');
-        stages.forEach(stage => {
-            stage.addEventListener('click', () => {
-                stages.forEach(s => s.classList.remove('active'));
-                stage.classList.add('active');
+        function showLinkTooltip(event, d) {
+            if (d.type === 'stage-flow') {
+                tooltip.html(`
+                    <strong>Data Flow</strong><br>
+                    <div class="mt-1 text-xs">
+                        <div><i class="fas fa-arrow-right"></i> ${d.label}</div>
+                        <div><i class="fas fa-tachometer-alt"></i> Rate: ${d.rate}</div>
+                    </div>
+                `);
+            } else if (d.type === 'data-flow') {
+                tooltip.html(`
+                    <strong>Tool Data Transfer</strong><br>
+                    <div class="mt-1 text-xs">
+                        <div><i class="fas fa-exchange-alt"></i> ${d.label}</div>
+                    </div>
+                `);
+            } else {
+                tooltip.html(`
+                    <strong>Tool Connection</strong><br>
+                    <div class="text-xs text-gray-400">Stage ↔ Tool Link</div>
+                `);
+            }
+            tooltip.style('display', 'block')
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 10) + 'px');
+        }
+
+        function hideTooltip() {
+            tooltip.style('display', 'none');
+        }
+
+        function nodeClicked(event, d) {
+            // Highlight connected links
+            link.style('stroke-opacity', l => {
+                return l.source.id === d.id || l.target.id === d.id ? 1 : 0.1;
             });
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+                link.style('stroke-opacity', null);
+            }, 2000);
+        }
+
+        // Drag functions
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            // Keep node fixed after drag
+            // d.fx = null;
+            // d.fy = null;
+        }
+
+        // Simulation tick
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node.attr('transform', d => `translate(${d.x},${d.y})`);
         });
 
-        // Tool Badge Click
-        const toolBadges = document.querySelectorAll('.tool-badge');
-        toolBadges.forEach(badge => {
-            badge.addEventListener('click', (e) => {
-                e.stopPropagation();
-                alert(`Tool: ${badge.textContent.trim()}\nStatus: ${badge.classList.contains('connected') ? 'Connected' : badge.classList.contains('warning') ? 'Warning' : 'Disconnected'}`);
+        // Control Functions
+        function resetSimulation() {
+            // Unfix all nodes
+            nodes.forEach(n => {
+                n.fx = null;
+                n.fy = null;
             });
-        });
+            simulation.alpha(1).restart();
+        }
+
+        let animationEnabled = false;
+        function toggleAnimation() {
+            animationEnabled = !animationEnabled;
+            if (animationEnabled) {
+                startParticleAnimation();
+            } else {
+                stopParticleAnimation();
+            }
+        }
+
+        let particleInterval;
+        function startParticleAnimation() {
+            const stageFlowLinks = links.filter(l => l.type === 'stage-flow');
+            
+            particleInterval = setInterval(() => {
+                stageFlowLinks.forEach(link => {
+                    const particle = g.append('circle')
+                        .attr('class', 'particle')
+                        .attr('r', 4)
+                        .attr('cx', link.source.x)
+                        .attr('cy', link.source.y);
+
+                    particle.transition()
+                        .duration(2000)
+                        .attr('cx', link.target.x)
+                        .attr('cy', link.target.y)
+                        .remove();
+                });
+            }, 500);
+        }
+
+        function stopParticleAnimation() {
+            if (particleInterval) {
+                clearInterval(particleInterval);
+            }
+            g.selectAll('.particle').remove();
+        }
+
+        function fitView() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const midX = bounds.x + bounds.width / 2;
+            const midY = bounds.y + bounds.height / 2;
+            
+            const scale = 0.8 / Math.max(bounds.width / fullWidth, bounds.height / fullHeight);
+            const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+            );
+        }
+
+        // Auto-update timestamp
+        setInterval(() => {
+            const now = new Date();
+            const minutes = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('last-update').textContent = `${minutes}분 전`;
+        }, 60000);
     </script>
 </body>
 </html>
