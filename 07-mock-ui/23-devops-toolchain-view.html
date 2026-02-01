@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FleetFlag - DevOps Toolchain Management (JointJS)</title>
+    <title>FleetFlag - DevOps Toolchain Management (JointJS Layouts)</title>
     
     <!-- JointJS CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.css">
@@ -116,9 +116,12 @@
                     <i class="fas fa-project-diagram mr-3" style="color: #00aad2;"></i>
                     DevOps Toolchain Management
                 </h1>
-                <p class="text-slate-400">Professional Visualization with JointJS v3.7</p>
+                <p class="text-slate-400">Professional Visualization with JointJS Automatic Layouts</p>
             </div>
             <div class="flex gap-3">
+                <button onclick="relayout()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
+                    <i class="fas fa-sync mr-2"></i>Re-Layout
+                </button>
                 <button onclick="exportSVG()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
                     <i class="fas fa-file-image mr-2"></i>Export SVG
                 </button>
@@ -150,82 +153,64 @@
     <div class="max-w-[1400px] mx-auto">
         <!-- Tabs -->
         <div class="flex gap-3 mb-6">
-            <button class="tab-button active" onclick="switchTab('infinity')">
-                <i class="fas fa-infinity mr-2"></i>Infinity Loop
+            <button class="tab-button active" onclick="switchTab('circular')">
+                <i class="fas fa-circle-notch mr-2"></i>Circular Layout
             </button>
-            <button class="tab-button" onclick="switchTab('pipeline')">
-                <i class="fas fa-stream mr-2"></i>Horizontal Pipeline
+            <button class="tab-button" onclick="switchTab('directed')">
+                <i class="fas fa-project-diagram mr-2"></i>Directed Graph
             </button>
-            <button class="tab-button" onclick="switchTab('hybrid')">
-                <i class="fas fa-layer-group mr-2"></i>Hybrid Layers
+            <button class="tab-button" onclick="switchTab('grid')">
+                <i class="fas fa-th mr-2"></i>Grid Layout
             </button>
         </div>
 
         <!-- Tab Contents -->
         <div class="glass-card p-6">
-            <!-- Tab 1: Infinity Loop -->
-            <div id="tab-infinity" class="tab-content">
+            <!-- Tab 1: Circular Layout -->
+            <div id="tab-circular" class="tab-content">
                 <h2 class="text-2xl font-bold text-white mb-4">
-                    <i class="fas fa-infinity mr-2 text-purple-400"></i>
-                    DevOps Infinity Loop
+                    <i class="fas fa-circle-notch mr-2 text-purple-400"></i>
+                    DevOps Circular Layout
                 </h2>
                 <div class="paper-container relative">
                     <div class="control-panel">
-                        <button class="control-btn" onclick="zoomIn('infinity')" title="Zoom In">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button class="control-btn" onclick="zoomOut('infinity')" title="Zoom Out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button class="control-btn" onclick="resetView('infinity')" title="Reset">
-                            <i class="fas fa-compress"></i>
+                        <button class="control-btn" onclick="fitContent('circular')" title="Fit to View">
+                            <i class="fas fa-expand"></i>
                         </button>
                     </div>
-                    <div id="paper-infinity"></div>
+                    <div id="paper-circular"></div>
                 </div>
             </div>
 
-            <!-- Tab 2: Horizontal Pipeline -->
-            <div id="tab-pipeline" class="tab-content" style="display: none;">
+            <!-- Tab 2: Directed Graph -->
+            <div id="tab-directed" class="tab-content" style="display: none;">
                 <h2 class="text-2xl font-bold text-white mb-4">
-                    <i class="fas fa-stream mr-2 text-blue-400"></i>
-                    Horizontal CI/CD Pipeline
+                    <i class="fas fa-project-diagram mr-2 text-blue-400"></i>
+                    DevOps Directed Graph (Dagre Layout)
                 </h2>
                 <div class="paper-container relative">
                     <div class="control-panel">
-                        <button class="control-btn" onclick="zoomIn('pipeline')" title="Zoom In">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button class="control-btn" onclick="zoomOut('pipeline')" title="Zoom Out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button class="control-btn" onclick="resetView('pipeline')" title="Reset">
-                            <i class="fas fa-compress"></i>
+                        <button class="control-btn" onclick="fitContent('directed')" title="Fit to View">
+                            <i class="fas fa-expand"></i>
                         </button>
                     </div>
-                    <div id="paper-pipeline"></div>
+                    <div id="paper-directed"></div>
                 </div>
             </div>
 
-            <!-- Tab 3: Hybrid Layers -->
-            <div id="tab-hybrid" class="tab-content" style="display: none;">
+            <!-- Tab 3: Grid Layout -->
+            <div id="tab-grid" class="tab-content" style="display: none;">
                 <h2 class="text-2xl font-bold text-white mb-4">
-                    <i class="fas fa-layer-group mr-2 text-indigo-400"></i>
-                    Hybrid 3-Layer Architecture
+                    <i class="fas fa-th mr-2 text-indigo-400"></i>
+                    DevOps Grid Layout
                 </h2>
                 <div class="paper-container relative">
                     <div class="control-panel">
-                        <button class="control-btn" onclick="zoomIn('hybrid')" title="Zoom In">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button class="control-btn" onclick="zoomOut('hybrid')" title="Zoom Out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button class="control-btn" onclick="resetView('hybrid')" title="Reset">
-                            <i class="fas fa-compress"></i>
+                        <button class="control-btn" onclick="fitContent('grid')" title="Fit to View">
+                            <i class="fas fa-expand"></i>
                         </button>
                     </div>
-                    <div id="paper-hybrid"></div>
+                    <div id="paper-grid"></div>
                 </div>
             </div>
         </div>
@@ -236,30 +221,46 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.6.0/backbone-min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.js"></script>
+    
+    <!-- Dagre for DirectedGraph Layout -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/graphlib@2.1.8/dist/graphlib.core.min.js"></script>
 
     <script>
         // DevOps Stage Data
         const stages = [
-            { id: 'plan', name: 'Plan', color: '#7e57c2', tools: ['Jira', 'Azure Boards'] },
-            { id: 'code', name: 'Code', color: '#26a69a', tools: ['Git', 'GitHub'] },
-            { id: 'build', name: 'Build', color: '#42a5f5', tools: ['Maven', 'npm'] },
-            { id: 'test', name: 'Test', color: '#66bb6a', tools: ['JUnit', 'Jest'] },
-            { id: 'release', name: 'Release', color: '#ffa726', tools: ['Jenkins', 'GitLab CI'] },
-            { id: 'deploy', name: 'Deploy', color: '#ef5350', tools: ['Kubernetes', 'Docker'] },
-            { id: 'operate', name: 'Operate', color: '#ab47bc', tools: ['Ansible', 'Puppet'] },
-            { id: 'monitor', name: 'Monitor', color: '#29b6f6', tools: ['Prometheus', 'Grafana'] }
+            { id: 'plan', name: 'Plan', color: '#7e57c2' },
+            { id: 'code', name: 'Code', color: '#26a69a' },
+            { id: 'build', name: 'Build', color: '#42a5f5' },
+            { id: 'test', name: 'Test', color: '#66bb6a' },
+            { id: 'release', name: 'Release', color: '#ffa726' },
+            { id: 'deploy', name: 'Deploy', color: '#ef5350' },
+            { id: 'operate', name: 'Operate', color: '#ab47bc' },
+            { id: 'monitor', name: 'Monitor', color: '#29b6f6' }
+        ];
+
+        // Connections (DevOps cycle)
+        const connections = [
+            ['plan', 'code'],
+            ['code', 'build'],
+            ['build', 'test'],
+            ['test', 'release'],
+            ['release', 'deploy'],
+            ['deploy', 'operate'],
+            ['operate', 'monitor'],
+            ['monitor', 'plan'] // Loop back
         ];
 
         // Global objects
         let graphs = {};
         let papers = {};
-        let scales = { infinity: 1, pipeline: 1, hybrid: 1 };
+        let elements = {};
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            initInfinityLoop();
-            initHorizontalPipeline();
-            initHybridLayers();
+            initCircularLayout();
+            initDirectedGraph();
+            initGridLayout();
         });
 
         // Tab switching
@@ -271,14 +272,14 @@
             event.target.classList.add('active');
         }
 
-        // Helper: Create rounded rectangle
-        function createBox(x, y, w, h, text, color) {
+        // Create element helper
+        function createElement(stage) {
             return new joint.shapes.standard.Rectangle({
-                position: { x, y },
-                size: { width: w, height: h },
+                id: stage.id,
+                size: { width: 120, height: 80 },
                 attrs: {
                     body: {
-                        fill: color,
+                        fill: stage.color,
                         stroke: '#ffffff',
                         strokeWidth: 3,
                         rx: 12,
@@ -286,7 +287,7 @@
                         filter: { name: 'dropShadow', args: { dx: 0, dy: 3, blur: 8, color: 'rgba(0,0,0,0.3)' } }
                     },
                     label: {
-                        text: text,
+                        text: stage.name,
                         fill: '#ffffff',
                         fontSize: 14,
                         fontWeight: 'bold',
@@ -297,40 +298,15 @@
             });
         }
 
-        // Helper: Create circle
-        function createCircle(x, y, size, text, color) {
-            return new joint.shapes.standard.Circle({
-                position: { x, y },
-                size: { width: size, height: size },
-                attrs: {
-                    body: {
-                        fill: color,
-                        stroke: '#ffffff',
-                        strokeWidth: 3,
-                        filter: { name: 'dropShadow', args: { dx: 0, dy: 3, blur: 8, color: 'rgba(0,0,0,0.3)' } }
-                    },
-                    label: {
-                        text: text,
-                        fill: '#ffffff',
-                        fontSize: 12,
-                        fontWeight: 'bold',
-                        textAnchor: 'middle',
-                        textVerticalAnchor: 'middle'
-                    }
-                }
-            });
-        }
-
-        // Helper: Create link
-        function createLink(source, target, dashed = false) {
+        // Create link helper
+        function createLink(sourceId, targetId) {
             return new joint.shapes.standard.Link({
-                source: source,
-                target: target,
+                source: { id: sourceId },
+                target: { id: targetId },
                 attrs: {
                     line: {
                         stroke: '#3b82f6',
                         strokeWidth: 3,
-                        strokeDasharray: dashed ? '8,4' : 'none',
                         targetMarker: {
                             type: 'path',
                             d: 'M 10 -5 L 0 0 L 10 5 Z',
@@ -338,19 +314,20 @@
                         }
                     }
                 },
-                connector: { name: 'rounded' }
+                connector: { name: 'rounded' },
+                router: { name: 'normal' }
             });
         }
 
         // ==========================================
-        // TAB 1: INFINITY LOOP
+        // TAB 1: CIRCULAR LAYOUT
         // ==========================================
-        function initInfinityLoop() {
+        function initCircularLayout() {
             const graph = new joint.dia.Graph();
-            graphs['infinity'] = graph;
+            graphs['circular'] = graph;
 
             const paper = new joint.dia.Paper({
-                el: document.getElementById('paper-infinity'),
+                el: document.getElementById('paper-circular'),
                 model: graph,
                 width: 1300,
                 height: 650,
@@ -358,62 +335,49 @@
                 background: { color: '#ffffff' },
                 interactive: false
             });
-            papers['infinity'] = paper;
+            papers['circular'] = paper;
 
-            // Lemniscate parameters
-            const cx = 650, cy = 325;
-            const a = 250, b = 150;
-
-            // Draw infinity path
-            const pathData = [];
-            for (let i = 0; i <= 200; i++) {
-                const t = (i / 200) * 2 * Math.PI;
-                const cos_t = Math.cos(t);
-                const sin_t = Math.sin(t);
-                const denom = 1 + sin_t * sin_t;
-                const x = cx + (a * cos_t) / denom;
-                const y = cy + (b * sin_t * cos_t) / denom;
-                pathData.push((i === 0 ? 'M' : 'L') + ` ${x} ${y}`);
-            }
-
-            const loopPath = new joint.shapes.standard.Path({
-                attrs: {
-                    body: {
-                        d: pathData.join(' '),
-                        fill: 'none',
-                        stroke: '#3b82f6',
-                        strokeWidth: 4,
-                        strokeDasharray: '12,6',
-                        opacity: 0.6
-                    },
-                    label: { text: '' }
-                }
+            // Create elements
+            const els = {};
+            stages.forEach(stage => {
+                const el = createElement(stage);
+                el.addTo(graph);
+                els[stage.id] = el;
             });
-            loopPath.addTo(graph);
+            elements['circular'] = els;
 
-            // Place stages on lemniscate
-            stages.forEach((stage, i) => {
-                const t = (i / 8) * 2 * Math.PI;
-                const cos_t = Math.cos(t);
-                const sin_t = Math.sin(t);
-                const denom = 1 + sin_t * sin_t;
-                const x = cx + (a * cos_t) / denom - 60;
-                const y = cy + (b * sin_t * cos_t) / denom - 40;
+            // Create links
+            connections.forEach(([src, tgt]) => {
+                createLink(src, tgt).addTo(graph);
+            });
 
-                const box = createBox(x, y, 120, 80, stage.name, stage.color);
-                box.addTo(graph);
+            // Apply circular layout
+            applyCircularLayout(graph);
+        }
+
+        function applyCircularLayout(graph) {
+            const cells = graph.getCells();
+            const elements = cells.filter(c => c.isElement());
+            const n = elements.length;
+            const cx = 650, cy = 325, r = 200;
+
+            elements.forEach((el, i) => {
+                const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+                const x = cx + r * Math.cos(angle) - 60;
+                const y = cy + r * Math.sin(angle) - 40;
+                el.position(x, y);
             });
         }
 
         // ==========================================
-        // TAB 2: HORIZONTAL PIPELINE
+        // TAB 2: DIRECTED GRAPH (DAGRE)
         // ==========================================
-        function initHorizontalPipeline() {
+        function initDirectedGraph() {
             const graph = new joint.dia.Graph();
-            graphs['pipeline'] = graph;
+            graphs['directed'] = graph;
 
             const paper = new joint.dia.Paper({
-                el: document.getElementById('paper-pipeline'),
+                el: document.getElementById('paper-directed'),
                 model: graph,
                 width: 1300,
                 height: 650,
@@ -421,67 +385,101 @@
                 background: { color: '#ffffff' },
                 interactive: false
             });
-            papers['pipeline'] = paper;
+            papers['directed'] = paper;
 
-            const startX = 50, startY = 280, spacing = 145, w = 120, h = 90;
-            const boxes = [];
-
-            // Create stage boxes
-            stages.forEach((stage, i) => {
-                const x = startX + i * spacing;
-                const box = createBox(x, startY, w, h, `${stage.name}\n${stage.tools.length} tools`, stage.color);
-                box.addTo(graph);
-                boxes.push(box);
-
-                // Add arrow to next stage
-                if (i < 7) {
-                    const link = createLink(
-                        { id: box.id },
-                        { x: x + w + spacing/2, y: startY + h/2 }
-                    );
-                    link.addTo(graph);
-                }
+            // Create elements
+            const els = {};
+            stages.forEach(stage => {
+                const el = createElement(stage);
+                el.addTo(graph);
+                els[stage.id] = el;
             });
+            elements['directed'] = els;
 
-            // Loop back arrow
-            const loopLink = createLink(
-                { id: boxes[7].id },
-                { id: boxes[0].id },
-                true
-            );
+            // Create links (without loop-back for better dagre layout)
+            connections.slice(0, 7).forEach(([src, tgt]) => {
+                createLink(src, tgt).addTo(graph);
+            });
+            // Add loop-back as curved link
+            const loopLink = createLink('monitor', 'plan');
+            loopLink.attr('line/strokeDasharray', '8,4');
+            loopLink.attr('line/stroke', '#8b5cf6');
             loopLink.vertices([
-                { x: startX + 7 * spacing + w/2, y: startY + h + 80 },
-                { x: startX + w/2, y: startY + h + 80 }
+                { x: 650, y: 600 }
             ]);
-            loopLink.labels([{
-                attrs: {
-                    text: {
-                        text: 'Continuous Loop',
-                        fill: '#8b5cf6',
-                        fontSize: 13,
-                        fontWeight: 'bold'
-                    },
-                    rect: {
-                        fill: 'rgba(139,92,246,0.1)',
-                        stroke: '#8b5cf6',
-                        strokeWidth: 1,
-                        rx: 6
-                    }
-                },
-                position: 0.5
-            }]);
             loopLink.addTo(graph);
+
+            // Apply Dagre layout
+            if (typeof dagre !== 'undefined') {
+                applyDagreLayout(graph);
+            } else {
+                console.warn('Dagre not loaded, using manual layout');
+                applyManualDirectedLayout(graph);
+            }
+        }
+
+        function applyDagreLayout(graph) {
+            try {
+                // Create dagre graph
+                const g = new dagre.graphlib.Graph();
+                g.setGraph({ 
+                    rankdir: 'LR',
+                    nodesep: 80,
+                    ranksep: 150
+                });
+                g.setDefaultEdgeLabel(() => ({}));
+
+                // Add nodes
+                graph.getElements().forEach(el => {
+                    g.setNode(el.id, {
+                        width: el.size().width,
+                        height: el.size().height
+                    });
+                });
+
+                // Add edges
+                graph.getLinks().forEach(link => {
+                    const src = link.source();
+                    const tgt = link.target();
+                    if (src.id && tgt.id) {
+                        g.setEdge(src.id, tgt.id);
+                    }
+                });
+
+                // Run layout
+                dagre.layout(g);
+
+                // Apply positions
+                graph.getElements().forEach(el => {
+                    const node = g.node(el.id);
+                    if (node) {
+                        el.position(node.x - node.width/2, node.y - node.height/2);
+                    }
+                });
+            } catch (e) {
+                console.error('Dagre layout error:', e);
+                applyManualDirectedLayout(graph);
+            }
+        }
+
+        function applyManualDirectedLayout(graph) {
+            const elements = graph.getElements();
+            const startX = 100, startY = 280, spacing = 150;
+            
+            elements.forEach((el, i) => {
+                el.position(startX + i * spacing, startY);
+            });
         }
 
         // ==========================================
-        // TAB 3: HYBRID LAYERS
+        // TAB 3: GRID LAYOUT
         // ==========================================
-        function initHybridLayers() {
+        function initGridLayout() {
             const graph = new joint.dia.Graph();
-            graphs['hybrid'] = graph;
+            graphs['grid'] = graph;
 
             const paper = new joint.dia.Paper({
-                el: document.getElementById('paper-hybrid'),
+                el: document.getElementById('paper-grid'),
                 model: graph,
                 width: 1300,
                 height: 650,
@@ -489,133 +487,68 @@
                 background: { color: '#ffffff' },
                 interactive: false
             });
-            papers['hybrid'] = paper;
+            papers['grid'] = paper;
 
-            // Layer 1: Tool Groups (Top)
-            const toolGroups = [
-                { x: 100, y: 50, w: 200, text: 'Planning Tools\n(2 tools)', color: '#7e57c2' },
-                { x: 350, y: 50, w: 200, text: 'SCM Tools\n(3 tools)', color: '#26a69a' },
-                { x: 600, y: 50, w: 200, text: 'CI/CD Tools\n(2 tools)', color: '#ffa726' },
-                { x: 850, y: 50, w: 200, text: 'Monitoring\n(3 tools)', color: '#29b6f6' }
-            ];
+            // Create elements
+            const els = {};
+            stages.forEach(stage => {
+                const el = createElement(stage);
+                el.addTo(graph);
+                els[stage.id] = el;
+            });
+            elements['grid'] = els;
 
-            toolGroups.forEach(g => {
-                const box = new joint.shapes.standard.Rectangle({
-                    position: { x: g.x, y: g.y },
-                    size: { width: g.w, height: 80 },
-                    attrs: {
-                        body: {
-                            fill: g.color + '20',
-                            stroke: g.color,
-                            strokeWidth: 2,
-                            strokeDasharray: '6,3',
-                            rx: 10
-                        },
-                        label: {
-                            text: g.text,
-                            fill: g.color,
-                            fontSize: 13,
-                            fontWeight: 'bold',
-                            textAnchor: 'middle',
-                            textVerticalAnchor: 'middle'
-                        }
-                    }
-                });
-                box.addTo(graph);
+            // Create links
+            connections.forEach(([src, tgt]) => {
+                createLink(src, tgt).addTo(graph);
             });
 
-            // Layer 2: Central Circle (DevOps Loop)
-            const cx = 650, cy = 350, r = 180;
+            // Apply grid layout
+            applyGridLayout(graph);
+        }
 
-            // Draw circle path
-            const circlePath = [];
-            for (let i = 0; i <= 100; i++) {
-                const angle = (i / 100) * 2 * Math.PI;
-                const x = cx + r * Math.cos(angle);
-                const y = cy + r * Math.sin(angle);
-                circlePath.push((i === 0 ? 'M' : 'L') + ` ${x} ${y}`);
+        function applyGridLayout(graph) {
+            const elements = graph.getElements();
+            const cols = 4, rows = 2;
+            const startX = 150, startY = 180;
+            const spacingX = 250, spacingY = 200;
+
+            elements.forEach((el, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = startX + col * spacingX;
+                const y = startY + row * spacingY;
+                el.position(x, y);
+            });
+        }
+
+        // ==========================================
+        // CONTROLS
+        // ==========================================
+        function fitContent(view) {
+            const paper = papers[view];
+            if (paper) {
+                paper.scaleContentToFit({ padding: 40 });
             }
+        }
 
-            const circlePathShape = new joint.shapes.standard.Path({
-                attrs: {
-                    body: {
-                        d: circlePath.join(' ') + ' Z',
-                        fill: 'none',
-                        stroke: '#3b82f6',
-                        strokeWidth: 3,
-                        strokeDasharray: '10,5',
-                        opacity: 0.5
-                    },
-                    label: { text: '' }
+        function relayout() {
+            const activeView = document.querySelector('.tab-content:not([style*="display: none"])').id.replace('tab-', '');
+            const graph = graphs[activeView];
+            
+            if (activeView === 'circular') {
+                applyCircularLayout(graph);
+            } else if (activeView === 'directed') {
+                if (typeof dagre !== 'undefined') {
+                    applyDagreLayout(graph);
+                } else {
+                    applyManualDirectedLayout(graph);
                 }
-            });
-            circlePathShape.addTo(graph);
-
-            // Place stages in circle
-            stages.forEach((stage, i) => {
-                const angle = (i / 8) * 2 * Math.PI - Math.PI/2;
-                const x = cx + r * Math.cos(angle) - 50;
-                const y = cy + r * Math.sin(angle) - 50;
-
-                const circle = createCircle(x, y, 100, stage.name, stage.color);
-                circle.addTo(graph);
-            });
-
-            // Layer 3: Infrastructure (Bottom)
-            const infraTools = [
-                { x: 150, y: 580, text: 'Kubernetes' },
-                { x: 400, y: 580, text: 'Docker' },
-                { x: 650, y: 580, text: 'Terraform' },
-                { x: 900, y: 580, text: 'Ansible' }
-            ];
-
-            infraTools.forEach(tool => {
-                const box = new joint.shapes.standard.Rectangle({
-                    position: { x: tool.x, y: tool.y },
-                    size: { width: 150, height: 50 },
-                    attrs: {
-                        body: {
-                            fill: '#8b5cf6',
-                            stroke: '#6d28d9',
-                            strokeWidth: 2,
-                            rx: 10
-                        },
-                        label: {
-                            text: tool.text,
-                            fill: '#ffffff',
-                            fontSize: 13,
-                            fontWeight: 'bold',
-                            textAnchor: 'middle',
-                            textVerticalAnchor: 'middle'
-                        }
-                    }
-                });
-                box.addTo(graph);
-            });
+            } else if (activeView === 'grid') {
+                applyGridLayout(graph);
+            }
         }
 
-        // ==========================================
-        // ZOOM CONTROLS
-        // ==========================================
-        function zoomIn(view) {
-            scales[view] *= 1.2;
-            papers[view].scale(scales[view]);
-        }
-
-        function zoomOut(view) {
-            scales[view] *= 0.8;
-            papers[view].scale(scales[view]);
-        }
-
-        function resetView(view) {
-            scales[view] = 1;
-            papers[view].scale(1);
-            papers[view].translate(0, 0);
-        }
-
-        // ==========================================
-        // EXPORT
-        // ==========================================
         function exportSVG() {
             const activeView = document.querySelector('.tab-content:not([style*="display: none"])').id.replace('tab-', '');
             const paper = papers[activeView];
@@ -629,7 +562,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `devops-${activeView}.svg`;
+                a.download = `devops-${activeView}-layout.svg`;
                 a.click();
                 URL.revokeObjectURL(url);
             }
