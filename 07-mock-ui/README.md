@@ -2,17 +2,106 @@
 
 현대자동차 SDV 전환을 위한 Feature Flag 시스템의 UI Mock-up 모음입니다.
 
+## 📋 총 20개 Mock-UI 제작 완료 ✅
+
+### 🔥 최신 추가 (2026-02-01)
+- **23번**: DevOps Toolchain View (JointJS 자동 레이아웃 - Dagre, Circular, Grid) ⭐⭐⭐
+- **22번**: CI/CD Pipeline Detailed (JointJS Chevron 다이어그램) ⭐⭐
+- **21번**: SDV Toolchain Monitoring (ISO 26262 / ASPICE) ⭐
+- **20번**: CI/CD Pipeline Editor (드래그앤드롭 편집기) ⭐
+
+**상세 목록**: [MOCK_UI_LIST.md](./MOCK_UI_LIST.md)
+
+---
+
 ## 📋 목차
 
+### 🔧 최신 추가 - DevOps & CI/CD Pipeline (7개) ⭐
+- 23: [DevOps Toolchain View (JointJS 자동 레이아웃)](#23-devops-toolchain-view-) ⭐⭐⭐
+- 22: [CI/CD Pipeline Detailed (JointJS Chevron)](#22-cicd-pipeline-detailed-) ⭐⭐
+- 21: [SDV Toolchain Monitoring (ISO 26262)](#21-sdv-toolchain-monitoring-) ⭐
+- 20: [CI/CD Pipeline Editor (Drag & Drop)](#20-cicd-pipeline-editor-) ⭐
+- 19: [CI/CD Pipeline Flow (Real-time Sim)](#19-cicd-pipeline-flow-) ⭐
+- 18: [V-Model & DevOps Integration (Lemniscate)](#18-v-model--devops-integration-) ⭐⭐⭐
+- 17: [Toolchain Dashboard (D3.js Force)](#17-toolchain-dashboard-) ⭐
+
+### 🚨 기본 Mock-UI
 1. [BOM 의존성 매트릭스](#1-bom-의존성-매트릭스)
 2. [Safety Gatekeeper 대시보드](#2-safety-gatekeeper-대시보드)
 3. [CodeBeamer 추적성 관리](#3-codebeamer-추적성-관리)
 4. [Kill Switch 제어 센터](#4-kill-switch-제어-센터)
 5. [Rollout 전략 에디터](#5-rollout-전략-에디터)
 6. [Analytics & Monitoring 대시보드](#6-analytics--monitoring-대시보드)
-7. [End-to-End 시스템 시뮬레이터](#7-end-to-end-시스템-시뮬레이터)
+7. [End-to-End 시스템 시뮬레이터](#7-end-to-end-시스템-시뮬레이터) ⭐
 8. [시스템 연동 맵](#8-시스템-연동-맵)
-9. [Physical Deployment Viewer](#9-physical-deployment-viewer) ⭐ **NEW**
+9. [Physical Deployment Viewer](#9-physical-deployment-viewer) ⭐
+
+---
+
+## 🔧 DevOps & CI/CD Pipeline (최신 추가)
+
+### 23. DevOps Toolchain View ⭐⭐⭐
+
+**파일명**: `23-devops-toolchain-view.html`
+
+**목적**: JointJS 자동 레이아웃 엔진으로 8개 DevOps 단계와 27개 도구를 전문적으로 시각화
+
+**핵심 기능**:
+- **3가지 자동 레이아웃**: Circular, Directed Graph (Dagre), Grid
+- **Re-Layout 버튼**: 한 번의 클릭으로 재배치
+- **8 DevOps Stages**: Plan → Code → Build → Test → Release → Deploy → Operate → Monitor
+- **27 Active Tools**: GitHub, Jenkins, SonarQube, JFrog, Docker, K8s 등
+- **주요 지표**: 2.5분 사이클 타임, 98.5% 성공률
+
+**기술 스택**: JointJS 3.7.0, Dagre 0.8.5, Graphlib 2.1.8
+
+---
+
+### 22. CI/CD Pipeline Detailed ⭐⭐
+
+**파일명**: `22-cicd-pipeline-detailed.html`
+
+**목적**: JointJS Chevron 화살표 박스로 전문적인 파이프라인 다이어그램
+
+---
+
+### 21. SDV Toolchain Monitoring ⭐
+
+**파일명**: `21-sdv-toolchain-monitoring.html`
+
+**목적**: SDV 특화 툴체인 19개 도구 ISO 26262 / ASPICE 모니터링
+
+---
+
+### 20. CI/CD Pipeline Editor ⭐
+
+**파일명**: `20-ci-cd-pipeline-editor.html`
+
+**목적**: 드래그앤드롭 파이프라인 편집기 (JSON/PNG/SVG 내보내기)
+
+---
+
+### 19. CI/CD Pipeline Flow ⭐
+
+**파일명**: `19-ci-cd-pipeline-flow.html`
+
+**목적**: 실시간 시뮬레이션 (속도 조정 0.5x/1x/2x/5x)
+
+---
+
+### 18. V-Model & DevOps Integration ⭐⭐⭐
+
+**파일명**: `18-v-model-devops-integration.html`
+
+**목적**: Lemniscate 무한대 루프 + 파티클 애니메이션
+
+---
+
+### 17. Toolchain Dashboard ⭐
+
+**파일명**: `17-toolchain-management-dashboard.html`
+
+**목적**: D3.js Force-Directed Graph 시각화
 
 ---
 
