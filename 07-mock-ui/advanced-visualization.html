@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetFlag - Advanced Visualization Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #002c5f;
+            --secondary: #00aad2;
+            --d3js: #f9a03c;
+            --jointjs: #8b5cf6;
+            --threejs: #049ef4;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #8b5cf6 0%, #00aad2 100%);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+            border-color: var(--secondary);
+        }
+
+        .tool-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .badge-d3js {
+            background: linear-gradient(135deg, #f9a03c 0%, #f76707 100%);
+            color: white;
+        }
+
+        .badge-jointjs {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            color: white;
+        }
+
+        .badge-threejs {
+            background: linear-gradient(135deg, #049ef4 0%, #0369a1 100%);
+            color: white;
+        }
+
+        .badge-new {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #8b5cf6 0%, #00aad2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+
+        .icon-d3js {
+            background: linear-gradient(135deg, #f9a03c 0%, #f76707 100%);
+            box-shadow: 0 10px 20px rgba(249, 160, 60, 0.3);
+        }
+
+        .icon-jointjs {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        .icon-threejs {
+            background: linear-gradient(135deg, #049ef4 0%, #0369a1 100%);
+            box-shadow: 0 10px 20px rgba(4, 158, 244, 0.3);
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 200px;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: rgba(148, 163, 184, 0.3);
+            margin-bottom: 16px;
+            border: 2px dashed rgba(148, 163, 184, 0.2);
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            color: #94a3b8;
+        }
+
+        .nav-link:hover {
+            background: rgba(139, 92, 246, 0.1);
+            color: #a78bfa;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <nav class="glass-card mx-6 mt-6 p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-cyan-400 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cube text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">FleetFlag Advanced Visualization</h1>
+                    <p class="text-sm text-gray-400">고급 시각화 도구 갤러리</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="index.html" class="nav-link">
+                    <i class="fas fa-home mr-2"></i>메인 페이지
+                </a>
+                <a href="https://github.com/tobiaskim-hub/automotive-sdv-platform" class="nav-link" target="_blank">
+                    <i class="fab fa-github mr-2"></i>GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-gradient mx-6 mt-6 rounded-2xl p-12 text-center">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-5xl font-bold text-white mb-4">
+                🎨 Advanced Visualization Gallery
+            </h2>
+            <p class="text-xl text-purple-100 mb-4">
+                D3.js · JointJS · Three.js 기반 전문 시각화 Mock-UI
+            </p>
+            <p class="text-lg text-purple-200 mb-8">
+                고급 시각화 라이브러리를 활용한 인터랙티브 다이어그램 및 3D 렌더링
+            </p>
+            <div class="flex justify-center space-x-4">
+                <div class="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-lg">
+                    <div class="text-3xl font-bold text-white">8</div>
+                    <div class="text-sm text-purple-100">Advanced Mock-UIs</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-lg">
+                    <div class="text-3xl font-bold text-white">3</div>
+                    <div class="text-sm text-purple-100">Visualization Tools</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-lg">
+                    <div class="text-3xl font-bold text-white">100%</div>
+                    <div class="text-sm text-purple-100">Interactive</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="mx-6 mt-6">
+        <div class="grid grid-cols-3 gap-6">
+            <div class="glass-card p-6 text-center">
+                <div class="feature-icon icon-d3js mx-auto">
+                    <i class="fas fa-project-diagram text-white"></i>
+                </div>
+                <div class="stat-value">3</div>
+                <div class="text-sm text-gray-400 mt-2">D3.js Visualizations</div>
+                <div class="text-xs text-gray-500 mt-1">Force Graph, Animation, Simulation</div>
+            </div>
+            <div class="glass-card p-6 text-center">
+                <div class="feature-icon icon-jointjs mx-auto">
+                    <i class="fas fa-network-wired text-white"></i>
+                </div>
+                <div class="stat-value">2</div>
+                <div class="text-sm text-gray-400 mt-2">JointJS Diagrams</div>
+                <div class="text-xs text-gray-500 mt-1">Auto Layout, Professional</div>
+            </div>
+            <div class="glass-card p-6 text-center">
+                <div class="feature-icon icon-threejs mx-auto">
+                    <i class="fas fa-cube text-white"></i>
+                </div>
+                <div class="stat-value">1</div>
+                <div class="text-sm text-gray-400 mt-2">Three.js 3D</div>
+                <div class="text-xs text-gray-500 mt-1">3D Rendering, Interactive</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- JointJS Section -->
+    <section class="mx-6 mt-8">
+        <div class="glass-card p-6 mb-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="feature-icon icon-jointjs">
+                    <i class="fas fa-network-wired text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-white">JointJS - Professional Diagrams</h2>
+                    <p class="text-gray-400">전문 다이어그램 라이브러리 기반 자동 레이아웃</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <!-- 23번 -->
+                <a href="23-devops-toolchain-view.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-jointjs">JointJS</span>
+                            <span class="tool-badge badge-new">NEW ⭐⭐⭐</span>
+                        </div>
+                        <span class="text-purple-400 text-sm">#23</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-diagram-project"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">DevOps Toolchain View</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        자동 레이아웃 엔진 (Dagre, Circular, Grid)
+                    </p>
+                    <div class="space-y-2 text-sm text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Dagre 계층형 레이아웃 (Left-to-Right)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Circular Layout (360도 균등 분포)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Grid Layout (3x3 자동 정렬)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Re-Layout 동적 재배치</div>
+                        <div><i class="fas fa-chart-line text-purple-400 mr-2"></i>8 DevOps Stages, 27 Tools, 98.5% Success Rate</div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span><i class="fas fa-code mr-1"></i>20KB (51% 최적화)</span>
+                            <span><i class="fas fa-clock mr-1"></i>3시간 제작</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- 22번 -->
+                <a href="22-cicd-pipeline-detailed.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-jointjs">JointJS</span>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">⭐⭐</span>
+                        </div>
+                        <span class="text-purple-400 text-sm">#22</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">CI/CD Pipeline Detailed</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        Chevron 화살표 박스 전문 다이어그램
+                    </p>
+                    <div class="space-y-2 text-sm text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Chevron 화살표 박스 (8단계)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>툴 버블 (30+ 도구 아이콘)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>점선 연결 (도구-파이프라인)</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>SVG 벡터 렌더링</div>
+                        <div><i class="fas fa-chart-line text-purple-400 mr-2"></i>Zoom/Pan 컨트롤, SVG Export</div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span><i class="fas fa-code mr-1"></i>JointJS 3.7.0</span>
+                            <span><i class="fas fa-tools mr-1"></i>Custom Shapes</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- D3.js Section -->
+    <section class="mx-6 mt-8">
+        <div class="glass-card p-6 mb-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="feature-icon icon-d3js">
+                    <i class="fas fa-project-diagram text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-white">D3.js - Interactive Visualizations</h2>
+                    <p class="text-gray-400">데이터 기반 동적 시각화 및 애니메이션</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6">
+                <!-- 17번 -->
+                <a href="17-toolchain-management-dashboard.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-d3js">D3.js</span>
+                        </div>
+                        <span class="text-orange-400 text-sm">#17</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-circle-nodes"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Toolchain Dashboard</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        Force-Directed Graph + Infinity Loop
+                    </p>
+                    <div class="space-y-1 text-xs text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Force Simulation</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>8단계 + 23개 툴 노드</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>드래그/줌/팬</div>
+                    </div>
+                </a>
+
+                <!-- 18번 -->
+                <a href="18-v-model-devops-integration.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-d3js">D3.js</span>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">⭐⭐⭐</span>
+                        </div>
+                        <span class="text-orange-400 text-sm">#18</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-infinity"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">V-Model & DevOps</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        Lemniscate 무한대 루프 + 파티클
+                    </p>
+                    <div class="space-y-1 text-xs text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Lemniscate 수식</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Bézier 곡선</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>파티클 애니메이션</div>
+                    </div>
+                </a>
+
+                <!-- 19번 -->
+                <a href="19-ci-cd-pipeline-flow.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-d3js">D3.js</span>
+                        </div>
+                        <span class="text-orange-400 text-sm">#19</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-stream"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">CI/CD Pipeline Flow</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        실시간 시뮬레이션 + 속도 조정
+                    </p>
+                    <div class="space-y-1 text-xs text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>9단계 워크플로우</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>27개 이벤트 로그</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>0.5x ~ 5x 속도</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Three.js Section -->
+    <section class="mx-6 mt-8">
+        <div class="glass-card p-6 mb-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="feature-icon icon-threejs">
+                    <i class="fas fa-cube text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Three.js - 3D Rendering</h2>
+                    <p class="text-gray-400">WebGL 기반 3D 시각화 및 인터랙티브 렌더링</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6">
+                <!-- 09번 -->
+                <a href="09-physical-deployment-viewer.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge badge-threejs">Three.js</span>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white;">3D</span>
+                        </div>
+                        <span class="text-cyan-400 text-sm">#09</span>
+                    </div>
+                    <div class="preview-img" style="height: 250px;">
+                        <i class="fas fa-cubes" style="font-size: 64px;"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Physical Deployment Viewer</h3>
+                    <p class="text-gray-400 text-sm mb-4">
+                        IDC 랙 구성 3D 시각화 + 차량 ECU 배치 + 네트워크 토폴로지
+                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>3D 랙 뷰어 (Three.js)</div>
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>12대 서버 하드웨어 모니터링</div>
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>차량 HPC → CCU → ECU 계층</div>
+                        </div>
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>네트워크 토폴로지 맵</div>
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>OrbitControls 카메라 제어</div>
+                            <div><i class="fas fa-check text-green-400 mr-2"></i>LED 인디케이터 애니메이션</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-700">
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span><i class="fas fa-server mr-1"></i>4 Tabs: IDC / Vehicle / Network / 3D</span>
+                            <span><i class="fas fa-code mr-1"></i>Three.js 0.160.0</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Real-time Simulation Section -->
+    <section class="mx-6 mt-8">
+        <div class="glass-card p-6 mb-6">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);">
+                    <i class="fas fa-play-circle text-white"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Real-time Simulations</h2>
+                    <p class="text-gray-400">실시간 시뮬레이션 및 인터랙티브 애니메이션</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <!-- 00번 -->
+                <a href="00-crisis-scenario.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">Real-time</span>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white;">Crisis</span>
+                        </div>
+                        <span class="text-red-400 text-sm">#00</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Crisis Scenario Simulator</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        LCA 센서 오류 감지 및 Kill Switch 긴급 대응
+                    </p>
+                    <div class="space-y-2 text-sm text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>3초 내 125,000대 차량 전파</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>실시간 애니메이션</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>Kill Switch 자동 발동</div>
+                    </div>
+                </a>
+
+                <!-- 20번 -->
+                <a href="20-ci-cd-pipeline-editor.html" class="glass-card p-6 block hover:scale-[1.02] transition-transform">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="tool-badge" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white;">Drag & Drop</span>
+                        </div>
+                        <span class="text-blue-400 text-sm">#20</span>
+                    </div>
+                    <div class="preview-img">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">CI/CD Pipeline Editor</h3>
+                    <p class="text-gray-400 text-sm mb-3">
+                        드래그앤드롭 파이프라인 편집기
+                    </p>
+                    <div class="space-y-2 text-sm text-gray-500">
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>16개 컴포넌트 라이브러리</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>JSON/PNG/SVG 내보내기</div>
+                        <div><i class="fas fa-check text-green-400 mr-2"></i>커스텀 컴포넌트 추가</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mx-6 mt-8 mb-6">
+        <div class="glass-card p-6 text-center">
+            <div class="text-gray-400 mb-4">
+                <i class="fas fa-cube text-purple-400 mr-2"></i>
+                FleetFlag Advanced Visualization Gallery
+            </div>
+            <div class="flex justify-center space-x-6 text-sm text-gray-500">
+                <a href="index.html" class="hover:text-purple-400 transition">
+                    <i class="fas fa-home mr-1"></i>메인 페이지
+                </a>
+                <a href="https://github.com/tobiaskim-hub/automotive-sdv-platform" class="hover:text-purple-400 transition" target="_blank">
+                    <i class="fab fa-github mr-1"></i>GitHub Repository
+                </a>
+                <a href="MOCK_UI_LIST.md" class="hover:text-purple-400 transition">
+                    <i class="fas fa-book mr-1"></i>전체 목록 (MOCK_UI_LIST.md)
+                </a>
+            </div>
+            <div class="mt-4 text-xs text-gray-600">
+                Last Updated: 2026-02-01 | Total: 8 Advanced Visualizations
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
